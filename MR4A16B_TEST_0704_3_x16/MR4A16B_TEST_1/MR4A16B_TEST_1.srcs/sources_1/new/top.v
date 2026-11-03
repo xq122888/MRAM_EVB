@@ -141,7 +141,12 @@ reg         R_WN;
 reg         R_GN;
 reg         R_UBN;
 reg         R_LBN;
-reg [15:0]  R_DQ;
+// Explicit output data and a single registered direction bit. Keep Z at
+// the I/O boundary instead of using 16 conditional Z-valued data registers.
+reg [15:0] dq_write_data;
+// Prevent synthesis from re-extracting an address-dependent clock enable.
+(* extract_enable = "no" *) reg dq_drive;
+wire [15:0] R_DQ = dq_drive ? dq_write_data : 16'hzzzz;
 
 (*mark_debug="true"*)wire [15:0] RD_DATA         ;
 reg [15:0]  dout;
@@ -280,21 +285,19 @@ mram_equal_lut #(.WIDTH(23)) eq_count_length(.a(addr_cnt),.b({2'b0,vio_addr_num}
 wire actual_equals_reference, actual_equals_current;
 mram_equal_lut #(.WIDTH(16)) eq_actual_reference(.a(RD_DATA),.b(dout_ref),.match(actual_equals_reference));
 mram_equal_lut #(.WIDTH(16)) eq_actual_current(.a(RD_DATA),.b(dout_d1),.match(actual_equals_current));
-// Compare seven 3-bit address groups in parallel before their small prefix
-// reductions; the two high counter bits must be zero for a 21-bit length.
-(* keep = "true" *) wire [6:0] count_less_group, count_equal_group;
-generate
-    genvar count_group;
-    for (count_group=0; count_group<7; count_group=count_group+1) begin : count_length_compare
-        assign count_less_group[count_group] = addr_cnt[count_group*3 +: 3] < vio_addr_num[count_group*3 +: 3];
-        assign count_equal_group[count_group] = addr_cnt[count_group*3 +: 3] == vio_addr_num[count_group*3 +: 3];
-    end
-endgenerate
-(* keep = "true" *) wire count_high_less = count_less_group[6] || (count_equal_group[6] && count_less_group[5]) || (&count_equal_group[6:5] && count_less_group[4]);
-(* keep = "true" *) wire count_mid_less = count_less_group[3] || (count_equal_group[3] && count_less_group[2]) || (&count_equal_group[3:2] && count_less_group[1]);
-(* keep = "true" *) wire count_high_equal = &count_equal_group[6:4];
-(* keep = "true" *) wire count_mid_equal = &count_equal_group[3:1];
-wire addr_count_less = !(|addr_cnt[22:21]) && (count_high_less || (count_high_equal && (count_mid_less || (count_mid_equal && count_less_group[0]))));
+// Compare three address slices in parallel, then combine five one-bit
+// results in one LUT. Include the two upper counter bits in the high slice
+// so the original unsigned 23-bit-vs-21-bit relation is preserved.
+(* keep = "true" *) wire [2:0] count_less_slice, count_equal_slice;
+assign count_less_slice[0] = addr_cnt[6:0] < vio_addr_num[6:0];
+assign count_equal_slice[0] = addr_cnt[6:0] == vio_addr_num[6:0];
+assign count_less_slice[1] = addr_cnt[13:7] < vio_addr_num[13:7];
+assign count_equal_slice[1] = addr_cnt[13:7] == vio_addr_num[13:7];
+assign count_less_slice[2] = addr_cnt[22:14] < {2'b0,vio_addr_num[20:14]};
+assign count_equal_slice[2] = addr_cnt[22:14] == {2'b0,vio_addr_num[20:14]};
+wire addr_count_less = count_less_slice[2] ||
+                      (count_equal_slice[2] && count_less_slice[1]) ||
+                      (count_equal_slice[2] && count_equal_slice[1] && count_less_slice[0]);
 // Bound equality reduction to small LUT groups instead of a wide carry
 // reduction. Preserve the zero-length guard and the two upper counter bits.
 (* keep = "true" *) wire [7:0] addr_last_group;
@@ -889,23 +892,29 @@ always @(posedge clk or negedge rstn) begin
 end
 
 //---
+// Combine the two original zero-delay write conditions before direction
+// control. Writes take priority over the end-of-period zero-data update.
+wire dq_write_event = (vio_t_AV2DV==16'd0 &&
+    ((start_d2 && !start_d3) || (!current_equals_address && (keep || (|addr))))) ||
+    (vio_t_AV2DV!=16'd0 && hold_sample_count==vio_t_AV2DV);
 always @(posedge clk or negedge rstn) begin
-    if(!rstn)
-        R_DQ <= 16'h0;
-    else if(detail_stall)
-        R_DQ <= R_DQ;
-    else if(rd_en_d)
-        R_DQ <= 16'hz;
-    else if(vio_t_AV2DV==0 && keep && !current_equals_address)
-        R_DQ <= dout;
-    else if(vio_t_AV2DV==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
-        R_DQ <= dout;
-    else if(vio_t_AV2DV!=0 && hold_sample_count==vio_t_AV2DV)
-        R_DQ <= dout;
-    else if(period_match)
-        R_DQ <= 16'h0;
-    else
-        R_DQ <= R_DQ;
+    if (!rstn)
+        dq_write_data <= 16'd0;
+    else if (!detail_stall && !rd_en_d) begin
+        if (dq_write_event)
+            dq_write_data <= dout;
+        else if (period_match)
+            dq_write_data <= 16'd0;
+    end
+end
+always @(posedge clk or negedge rstn) begin
+    if (!rstn)
+        dq_drive <= 1'b1;
+    else if (!detail_stall) begin
+        // Preserve the original priority: read -> Z; write/period -> driven;
+        // otherwise retain the preceding direction. Keep this decision on D.
+        dq_drive <= !rd_en_d && (dq_write_event || period_match || dq_drive);
+    end
 end
 
 
