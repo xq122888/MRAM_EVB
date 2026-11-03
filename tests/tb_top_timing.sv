@@ -27,6 +27,16 @@ module tb_top_timing;
   wire [15:0] decoded_period_before_last=period-16'd2;
   wire [20:0] decoded_gn_write={5'b0,period}-{5'b0,dut.spi_t_gl2gh_w};
   wire [20:0] decoded_gn_read={5'b0,period}-{5'b0,dut.spi_t_gl2gh_r};
+  wire [20:0] decoded_compare_early_w = {5'b0,dut.spi_t_avqv_r} - {5'b0,dut.spi_t_avav_w};
+  wire [20:0] decoded_compare_early_r = {5'b0,dut.spi_t_avqv_r} - {5'b0,dut.spi_t_avav_r};
+  wire [20:0] decoded_en_release_w = {5'b0,dut.spi_t_avav_w} - {5'b0,dut.spi_t_el2eh_w};
+  wire [20:0] decoded_en_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_el2eh_r};
+  wire [20:0] decoded_wn_release_w = {5'b0,dut.spi_t_avav_w} - {5'b0,dut.spi_t_wl2wh_w};
+  wire [20:0] decoded_wn_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_wl2wh_w};
+  wire [20:0] decoded_ub_release_w = {5'b0,dut.spi_t_avav_w} - {5'b0,dut.spi_t_ubl2ubh_w};
+  wire [20:0] decoded_ub_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_ubl2ubh_r};
+  wire [20:0] decoded_lb_release_w = {5'b0,dut.spi_t_avav_w} - {5'b0,dut.spi_t_lbl2lbh_w};
+  wire [20:0] decoded_lb_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_lbl2lbh_r};
   reg checking=0;
   integer cycles=0,advances=0,finished=0,n,m,t,trial;
   reg [31:0] seed;
@@ -55,6 +65,16 @@ module tb_top_timing;
     force dut.spi_period_before_last_r=decoded_period_before_last;
     force dut.spi_gn_release_w=decoded_gn_write;
     force dut.spi_gn_release_r=decoded_gn_read;
+    force dut.spi_compare_early_w=decoded_compare_early_w;
+    force dut.spi_compare_early_r=decoded_compare_early_r;
+    force dut.spi_en_release_w=decoded_en_release_w;
+    force dut.spi_en_release_r=decoded_en_release_r;
+    force dut.spi_wn_release_w=decoded_wn_release_w;
+    force dut.spi_wn_release_r=decoded_wn_release_r;
+    force dut.spi_ub_release_w=decoded_ub_release_w;
+    force dut.spi_ub_release_r=decoded_ub_release_r;
+    force dut.spi_lb_release_w=decoded_lb_release_w;
+    force dut.spi_lb_release_r=decoded_lb_release_r;
     force dut.vio_din_sel=3; force refdut.vio_din_sel=3;
   end
   always @(posedge clk) begin
@@ -150,8 +170,20 @@ module tb_top_predicates;
   wire [15:0] decoded_period_before_last_r=unit_period_r-16'd2;
   wire [20:0] decoded_gn_write={5'b0,unit_period_w}-{5'b0,dut.spi_t_gl2gh_w};
   wire [20:0] decoded_gn_read={5'b0,unit_period_r}-{5'b0,dut.spi_t_gl2gh_r};
+  wire [20:0] decoded_compare_early_w = {5'b0,dut.spi_t_avqv_r} - {5'b0,dut.spi_t_avav_w};
+  wire [20:0] decoded_compare_early_r = {5'b0,dut.spi_t_avqv_r} - {5'b0,dut.spi_t_avav_r};
+  wire [20:0] decoded_en_release_w = {5'b0,dut.spi_t_avav_w} - {5'b0,dut.spi_t_el2eh_w};
+  wire [20:0] decoded_en_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_el2eh_r};
+  wire [20:0] decoded_wn_release_w = {5'b0,dut.spi_t_avav_w} - {5'b0,dut.spi_t_wl2wh_w};
+  wire [20:0] decoded_wn_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_wl2wh_w};
+  wire [20:0] decoded_ub_release_w = {5'b0,dut.spi_t_avav_w} - {5'b0,dut.spi_t_ubl2ubh_w};
+  wire [20:0] decoded_ub_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_ubl2ubh_r};
+  wire [20:0] decoded_lb_release_w = {5'b0,dut.spi_t_avav_w} - {5'b0,dut.spi_t_lbl2lbh_w};
+  wire [20:0] decoded_lb_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_lbl2lbh_r};
   reg [1:0] read_select=0;
   reg [15:0] unit_gl_w=2,unit_gl_r=10;
+  reg [15:0] unit_avqv=9,unit_en_w=3,unit_en_r=10,unit_wn=2;
+  reg [15:0] unit_ub_w=2,unit_ub_r=10,unit_lb_w=2,unit_lb_r=10;
   wire phase_d=read_select[0],phase_d2=read_select[1];
   wire [15:0] unit_selected_period=phase_d2?unit_period_r:unit_period_w;
   integer n,k,cases=0;
@@ -163,6 +195,11 @@ module tb_top_predicates;
     force dut.loop_idx=index;force dut.loop_count=loops;
     force dut.rd_en_d=phase_d;force dut.rd_en_d2=phase_d2;
     force dut.spi_t_gl2gh_w=unit_gl_w;force dut.spi_t_gl2gh_r=unit_gl_r;
+    force dut.spi_t_avqv_r=unit_avqv;
+    force dut.spi_t_el2eh_w=unit_en_w;force dut.spi_t_el2eh_r=unit_en_r;
+    force dut.spi_t_wl2wh_w=unit_wn;
+    force dut.spi_t_ubl2ubh_w=unit_ub_w;force dut.spi_t_ubl2ubh_r=unit_ub_r;
+    force dut.spi_t_lbl2lbh_w=unit_lb_w;force dut.spi_t_lbl2lbh_r=unit_lb_r;
     force dut.spi_last_loop_index=decoded_last_loop;
     force dut.spi_last_test_address=decoded_last_address;
     force dut.spi_t_avav_w=unit_period_w;force dut.spi_t_avav_r=unit_period_r;
@@ -172,6 +209,16 @@ module tb_top_predicates;
     force dut.spi_period_before_last_r=decoded_period_before_last_r;
     force dut.spi_gn_release_w=decoded_gn_write;
     force dut.spi_gn_release_r=decoded_gn_read;
+    force dut.spi_compare_early_w=decoded_compare_early_w;
+    force dut.spi_compare_early_r=decoded_compare_early_r;
+    force dut.spi_en_release_w=decoded_en_release_w;
+    force dut.spi_en_release_r=decoded_en_release_r;
+    force dut.spi_wn_release_w=decoded_wn_release_w;
+    force dut.spi_wn_release_r=decoded_wn_release_r;
+    force dut.spi_ub_release_w=decoded_ub_release_w;
+    force dut.spi_ub_release_r=decoded_ub_release_r;
+    force dut.spi_lb_release_w=decoded_lb_release_w;
+    force dut.spi_lb_release_r=decoded_lb_release_r;
   end
   task check;
     begin
@@ -182,6 +229,15 @@ module tb_top_predicates;
          dut.hold_before_one !== (hold+1==unit_selected_period) ||
          dut.hold_before_one !== (hold==unit_selected_period-1) ||
          dut.hold_before_two !== (hold+2==unit_selected_period) ||
+         dut.period_match !== (hold==unit_selected_period) ||
+         dut.early_match !== (hold==dut.vio_t_AVQV-unit_selected_period) ||
+         dut.late_match !== (hold==dut.vio_t_AVQV) ||
+         dut.en_release_match !== (hold==unit_selected_period-dut.vio_t_EL2EH) ||
+         dut.wn_release_match !== (hold==unit_selected_period-dut.vio_t_WL2WH) ||
+         dut.ub_release_match !== (hold==unit_selected_period-dut.vio_t_UBL2UBH) ||
+         dut.lb_release_match !== (hold==unit_selected_period-dut.vio_t_LBL2LBH) ||
+         dut.addr_count_less !== (count<length) ||
+         dut.addr_count_equal !== (count==length) ||
          dut.addr_is_last !== (count==length-1) ||
          dut.addr_is_last !== (count+1==length) ||
          dut.loop_has_more !== (index<loops-1))
@@ -197,12 +253,21 @@ module tb_top_predicates;
       hold=n-1;count=n-1;index=n-1;check;
       hold=n-2;count=n+1;index=n+1;check;
       hold=21'h1fffff;count=23'h7fffff;index=32'hffffffff;check;
+      hold=dut.vio_t_AVQV-period;check;
+      hold=hold+1;check;
     end
     // Exercise full-width counters and both sides of the loop boundary.
     for(n=0;n<20000;n=n+1) begin
       period=$random;hold=$random;length=$random;count=$random;
       unit_gl_w=$random;unit_gl_r=$random;read_select=n%4;
+      unit_avqv=$random;unit_en_w=$random;unit_en_r=$random;unit_wn=$random;
+      unit_ub_w=$random;unit_ub_r=$random;unit_lb_w=$random;unit_lb_r=$random;
       loops=$random;index=$random;check;
+      hold=dut.vio_t_AVQV-unit_selected_period;check;
+      hold=unit_selected_period-dut.vio_t_EL2EH;check;
+      hold=unit_selected_period-dut.vio_t_WL2WH;check;
+      hold=unit_selected_period-dut.vio_t_UBL2UBH;check;
+      hold=unit_selected_period-dut.vio_t_LBL2LBH;check;
       index=loops-1;check;
       index=loops;check;
       index=loops+1;check;
@@ -221,6 +286,9 @@ module tb_top_predicates;
       period_r_alt=(n<256)?(65535-n):(n-256);
       for(k=0;k<4;k=k+1) begin
         read_select=k;#1;
+        hold=dut.vio_t_AVQV-unit_selected_period;check;
+        hold=hold+1;check;
+        hold=unit_selected_period-dut.vio_t_WL2WH;check;
         hold=unit_selected_period-1;check;
         hold=unit_selected_period-2;check;
         hold=(phase_d2?unit_period_w:unit_period_r)-1;check;

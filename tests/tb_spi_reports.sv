@@ -13,6 +13,7 @@ module tb_spi_reports;
   reg [7:0] config_period=7;
   reg [1:0] config_write_mode=1,config_read_mode=1;
   reg bad_checksum=0;
+  reg [7:0] config_chip=8'h83;
   reg [3:0] expected_test_mode=0;
   always #2.5 clk=~clk;
   always @(posedge clk) if (ack) ack_count=ack_count+1;
@@ -37,7 +38,17 @@ module tb_spi_reports;
          dut.period_last_r !== (dut.t_avav_r-16'd1) ||
          dut.period_before_last_r !== (dut.t_avav_r-16'd2) ||
          dut.gn_release_w !== ({5'b0,dut.t_avav_w}-{5'b0,dut.t_gl2gh_w}) ||
-         dut.gn_release_r !== ({5'b0,dut.t_avav_r}-{5'b0,dut.t_gl2gh_r}))
+         dut.gn_release_r !== ({5'b0,dut.t_avav_r}-{5'b0,dut.t_gl2gh_r}) ||
+         dut.compare_early_w !== ({5'b0,dut.t_avqv_r}-{5'b0,dut.t_avav_w}) ||
+         dut.compare_early_r !== ({5'b0,dut.t_avqv_r}-{5'b0,dut.t_avav_r}) ||
+         dut.en_release_w !== ({5'b0,dut.t_avav_w}-{5'b0,dut.t_el2eh_w}) ||
+         dut.en_release_r !== ({5'b0,dut.t_avav_r}-{5'b0,dut.t_el2eh_r}) ||
+         dut.wn_release_w !== ({5'b0,dut.t_avav_w}-{5'b0,dut.t_wl2wh_w}) ||
+         dut.wn_release_r !== ({5'b0,dut.t_avav_r}-{5'b0,dut.t_wl2wh_w}) ||
+         dut.ub_release_w !== ({5'b0,dut.t_avav_w}-{5'b0,dut.t_ubl2ubh_w}) ||
+         dut.ub_release_r !== ({5'b0,dut.t_avav_r}-{5'b0,dut.t_ubl2ubh_r}) ||
+         dut.lb_release_w !== ({5'b0,dut.t_avav_w}-{5'b0,dut.t_lbl2lbh_w}) ||
+         dut.lb_release_r !== ({5'b0,dut.t_avav_r}-{5'b0,dut.t_lbl2lbh_r}))
         $fatal(1,"Decoded configuration is not atomic with base parameters");
     end
   end
@@ -53,7 +64,7 @@ module tb_spi_reports;
   endtask
   task configure(input [3:0] mode);
     reg [7:0] sum, unused;
-    reg [383:0] previous_config;
+    reg [767:0] previous_config;
     integer n;
     begin
       expected_test_mode=mode;
@@ -61,9 +72,12 @@ module tb_spi_reports;
         dut.t_avav_r,dut.last_loop_index,dut.last_test_address,dut.period_last_w,
         dut.period_before_last_w,dut.period_last_r,dut.period_before_last_r,
         dut.gn_release_w,dut.gn_release_r,
+        dut.compare_early_w,dut.compare_early_r,dut.en_release_w,dut.en_release_r,
+        dut.wn_release_w,dut.wn_release_r,dut.ub_release_w,dut.ub_release_r,
+        dut.lb_release_w,dut.lb_release_r,
         dut.write_mode,dut.read_mode};
       for(n=0;n<24;n=n+1) cfg[n]=0;
-      cfg[0]=8'h55;cfg[1]=8'h83;cfg[2]=mode;cfg[3]=1;
+      cfg[0]=8'h55;cfg[1]=config_chip;cfg[2]=mode;cfg[3]=1;
       cfg[8]=config_length[7:0];cfg[9]=config_length[15:8];
       cfg[10]={1'b0,config_length[22:16]};
       cfg[12]=config_loops[7:0];cfg[13]=config_loops[15:8];
@@ -80,6 +94,9 @@ module tb_spi_reports;
             dut.t_avav_r,dut.last_loop_index,dut.last_test_address,dut.period_last_w,
             dut.period_before_last_w,dut.period_last_r,dut.period_before_last_r,
             dut.gn_release_w,dut.gn_release_r,
+            dut.compare_early_w,dut.compare_early_r,dut.en_release_w,dut.en_release_r,
+            dut.wn_release_w,dut.wn_release_r,dut.ub_release_w,dut.ub_release_r,
+            dut.lb_release_w,dut.lb_release_r,
             dut.write_mode,dut.read_mode}
            !==previous_config)
           $fatal(1,"Bad checksum changed the committed configuration");
@@ -156,6 +173,10 @@ module tb_spi_reports;
       endcase
       configure(i%3);
     end
+    config_chip=8'h80;config_period=255;config_write_mode=3;config_read_mode=0;
+    configure(2);
+    config_chip=8'h82;config_period=1;config_write_mode=2;config_read_mode=1;
+    configure(2);
     bad_checksum=1;config_period=99;config_loops=9;config_length=123;
     configure(2);
     $display("PASS: %0d SPI polls; %0d configuration checks with atomic decoded thresholds and bad-checksum retention",frames,config_checks);

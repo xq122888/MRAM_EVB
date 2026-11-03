@@ -33,6 +33,17 @@ module spi_protocol #(
     // GN release uses the same delayed read/write bank for both operands.
     output reg [20:0] gn_release_w,
     output reg [20:0] gn_release_r,
+    output reg [20:0] compare_early_w,
+    output reg [20:0] compare_early_r,
+    output reg [20:0] en_release_w,
+    output reg [20:0] en_release_r,
+    output reg [20:0] wn_release_w,
+    output reg [20:0] wn_release_r,
+    output reg [20:0] ub_release_w,
+    output reg [20:0] ub_release_r,
+    output reg [20:0] lb_release_w,
+    output reg [20:0] lb_release_r,
+
     output reg [1:0]  write_mode,
     output reg [1:0]  read_mode,
     output reg [7:0]  err_detail_print,
@@ -365,6 +376,16 @@ end
 // later, so all parameters are committed before start_test is asserted.
 // These are the same period/GL2GH values selected by the existing mode cases.
 wire [15:0] commit_write_period = (write_mode_reg == 2'b11) ? 16'd10 : t_avav_reg;
+// Exact post-mode offsets, including the 16-bit x8 period+1 wrap.
+// These decode once per configuration, outside the running MRAM control paths.
+wire [15:0] commit_en_offset_w = (write_mode_reg == 2'b01 || write_mode_reg == 2'b10) ? 16'd1 : 16'd3;
+wire [15:0] commit_wn_offset = (write_mode_reg == 2'b10) ? 16'd1 : 16'd2;
+wire [15:0] commit_bn_offset_w = (write_mode_reg == 2'b00) ? 16'd3 : 16'd2;
+wire commit_x8 = (chip_type_reg == 8'h80) || (chip_type_reg == 8'h82);
+wire [15:0] commit_x8_offset = t_avav_reg + 16'd1;
+wire [15:0] commit_en_offset_r = (read_mode_reg == 2'b01) ? 16'd0 : t_avav_reg;
+wire [15:0] commit_bn_w = commit_x8 ? commit_x8_offset : commit_bn_offset_w;
+wire [15:0] commit_bn_r = commit_x8 ? commit_x8_offset : commit_en_offset_r;
 reg config_commit;
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n)
@@ -390,6 +411,17 @@ always @(posedge clk or negedge rst_n) begin
         period_before_last_r <= 16'd8;
         gn_release_w <= 21'd8;
         gn_release_r <= 21'd0;
+        compare_early_w <= 21'h1fffff;
+        compare_early_r <= 21'h1fffff;
+        en_release_w <= 21'd7;
+        en_release_r <= 21'd0;
+        wn_release_w <= 21'd8;
+        wn_release_r <= 21'd8;
+        ub_release_w <= 21'd8;
+        ub_release_r <= 21'd0;
+        lb_release_w <= 21'd8;
+        lb_release_r <= 21'd0;
+
         write_mode   <= 2'd0;        
 		read_mode    <= 2'd0;
 		err_detail_print <= 8'd0;
@@ -427,6 +459,16 @@ always @(posedge clk or negedge rst_n) begin
         // rd_en_d2 in top.v. Reset values above preserve the initial 10-2/10-10.
         gn_release_w <= {5'b0,commit_write_period};
         gn_release_r <= (read_mode_reg == 2'b01) ? {5'b0,t_avav_reg} : 21'd0;
+        compare_early_w <= 21'd9 - {5'b0,commit_write_period};
+        compare_early_r <= 21'd9 - {5'b0,t_avav_reg};
+        en_release_w <= {5'b0,commit_write_period} - {5'b0,commit_en_offset_w};
+        en_release_r <= {5'b0,t_avav_reg} - {5'b0,commit_en_offset_r};
+        wn_release_w <= {5'b0,commit_write_period} - {5'b0,commit_wn_offset};
+        wn_release_r <= {5'b0,t_avav_reg} - {5'b0,commit_wn_offset};
+        ub_release_w <= {5'b0,commit_write_period} - {5'b0,commit_bn_w};
+        ub_release_r <= {5'b0,t_avav_reg} - {5'b0,commit_bn_r};
+        lb_release_w <= {5'b0,commit_write_period} - {5'b0,commit_bn_w};
+        lb_release_r <= {5'b0,t_avav_reg} - {5'b0,commit_bn_r};
         period_last_r <= t_avav_reg - 16'd1;
         period_before_last_r <= t_avav_reg - 16'd2;
         // Invalid write_mode uses the existing 10-cycle fallback below.
