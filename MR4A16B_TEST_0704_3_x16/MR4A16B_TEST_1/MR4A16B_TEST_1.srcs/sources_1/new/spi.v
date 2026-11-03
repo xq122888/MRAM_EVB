@@ -73,13 +73,15 @@ module spi_protocol #(
     (*mark_debug="true"*)output reg stop_test,
     (*mark_debug="true"*)output reg stop_cmd_match,
     (*mark_debug="true"*)output reg tx_done_pulse,
+    // Backpressure for the error-event producer; only summary frames ACK loops.
+    output wire detail_stall,
     
     // 状态反馈输入
     input  wire [31:0] current_loop,
     input  wire test_busy,
     input  wire test_done,
     input  wire [31:0] error_cnt,
-    input  wire err_flag,
+    input  wire err_flag, // one-cycle compare event; payload inputs are snapshots
     input  wire [21:0] error_addr,
     input  wire [15:0] error_data,
     input  wire [15:0] expected_data,
@@ -543,9 +545,58 @@ assign cs_n_pos = cs_n_sync[1] && !cs_n_d1;
 reg        pending_test_complete;
 reg        pending_stop;
 reg        test_frame_acked;
+// A new start also flushes the old producer's short completion pipeline.
+// With supported MRAM periods (>=7 clocks), no new compare/completion can
+// legitimately reach this module inside this initialization window.
+reg [3:0] report_start_guard;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) report_start_guard <= 4'd0;
+    else report_start_guard <= {report_start_guard[2:0],start_test};
+end
+wire report_restart = start_test || (|report_start_guard);
+reg        detail_frame_acked;
+reg        detail_pending;
+reg [31:0] detail_loop;
+reg [22:0] detail_total;
+reg [31:0] detail_index;
+reg [21:0] detail_address;
+reg [15:0] detail_actual;
+reg [15:0] detail_expected;
+wire detail_enabled = (test_mode == 4'd2) && (err_detail_print == 8'd1);
+// Include the incoming pulse so the producer freezes immediately after its
+// compare/snapshot edge, before this one-entry mailbox is written next cycle.
+assign detail_stall = detail_enabled && (detail_pending || err_flag);
+
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        detail_pending <= 1'b0;
+        detail_loop <= 32'd0;
+        detail_total <= 23'd0;
+        detail_index <= 32'd0;
+        detail_address <= 22'd0;
+        detail_actual <= 16'd0;
+        detail_expected <= 16'd0;
+    end else if (config_commit || report_restart) begin
+        detail_pending <= 1'b0;
+    end else if (detail_enabled && err_flag && !detail_pending) begin
+        detail_pending <= 1'b1;
+        detail_loop <= current_loop;
+        detail_total <= test_length;
+        // error_cnt is updated by the producer on this same edge.
+        detail_index <= error_cnt + 32'd1;
+        detail_address <= error_addr;
+        detail_actual <= error_data;
+        detail_expected <= expected_data;
+    end else if (detail_frame_acked) begin
+        detail_pending <= 1'b0;
+    end
+end
+
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n)
+        pending_test_complete <= 1'b0;
+    else if (config_commit || report_restart)
         pending_test_complete <= 1'b0;
     else if (test_complete_rise)
         pending_test_complete <= 1'b1;
@@ -567,12 +618,19 @@ reg        frame_sent_this_cs;
 reg [7:0]  tx_buf [0:31];      // 发送缓冲区
 reg [4:0]  tx_byte_cnt;        // 总字节数
 reg        tx_start;           // 启动脉冲（仅在此块赋值）
+reg        tx_is_detail;
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         tx_byte_cnt <= 5'd0;
         frame_sent_this_cs <= 1'b0;
         tx_start <= 1'b0;
+        tx_is_detail <= 1'b0;
+    end else if (config_commit || report_restart) begin
+        tx_start <= 1'b0;
+        tx_byte_cnt <= 5'd0;
+        tx_is_detail <= 1'b0;
+        frame_sent_this_cs <= 1'b0;
     end else begin
         tx_start <= 1'b0;   // 默认低
 
@@ -582,7 +640,41 @@ always @(posedge clk or negedge rst_n) begin
 
         if (cs_n_neg) begin
             frame_sent_this_cs <= 1'b0;   // 新周期复位
-            if (!tx_sending && !frame_sent_this_cs && pending_test_complete) begin
+            if (!tx_sending && !frame_sent_this_cs && detail_enabled && detail_pending) begin
+                tx_buf[0] <= 8'h55;
+                tx_buf[1] <= 8'h19;
+                tx_buf[2] <= 8'hFF;
+                tx_buf[3] <= detail_loop[7:0];
+                tx_buf[4] <= detail_loop[15:8];
+                tx_buf[5] <= detail_loop[23:16];
+                tx_buf[6] <= detail_loop[31:24];
+                tx_buf[7] <= detail_total[7:0];
+                tx_buf[8] <= detail_total[15:8];
+                tx_buf[9] <= {1'b0,detail_total[22:16]};
+                tx_buf[10] <= 8'h00;
+                tx_buf[11] <= 8'h01;
+                tx_buf[12] <= detail_index[7:0];
+                tx_buf[13] <= detail_index[15:8];
+                tx_buf[14] <= detail_index[23:16];
+                tx_buf[15] <= detail_index[31:24];
+                tx_buf[16] <= detail_address[7:0];
+                tx_buf[17] <= detail_address[15:8];
+                tx_buf[18] <= {2'b0,detail_address[21:16]};
+                tx_buf[19] <= 8'h00;
+                tx_buf[20] <= detail_actual[7:0];
+                tx_buf[21] <= detail_actual[15:8];
+                tx_buf[22] <= detail_expected[7:0];
+                tx_buf[23] <= detail_expected[15:8];
+                tx_buf[24] <= 8'hAA;
+                tx_byte_cnt <= 5'd25;
+                tx_is_detail <= 1'b1;
+                tx_start <= 1'b1;
+                frame_sent_this_cs <= 1'b1;
+            // A loop-finish notification precedes the final compare pipeline
+            // draining. Wait for the memory engine to be idle in either mode.
+            end else if (!tx_sending && !frame_sent_this_cs && pending_test_complete && !test_busy &&
+                         (!detail_enabled || (!err_flag && !detail_pending))) begin
+                tx_is_detail <= 1'b0;
                 // 填充缓冲区
                 tx_buf[0] <= 8'h55;
                 if (test_mode == 2'd2) begin
@@ -596,7 +688,7 @@ always @(posedge clk or negedge rst_n) begin
                     tx_buf[8]  <= test_length[15:8];
                     tx_buf[9]  <= test_length[22:16];
                     tx_buf[10] <= 8'h00;
-                    tx_buf[11] <= err_flag;
+                    tx_buf[11] <= {7'b0, ((|error_cnt) || err_flag)};
                     tx_buf[12] <= error_cnt[7:0];
                     tx_buf[13] <= error_cnt[15:8];
                     tx_buf[14] <= error_cnt[23:16];
@@ -639,7 +731,17 @@ always @(posedge clk or negedge rst_n) begin
         tx_shift_reg    <= 8'h00;
         tx_done_pulse   <= 1'b0;
         test_frame_acked <= 1'b0;
+        detail_frame_acked <= 1'b0;
+    end else if (config_commit || report_restart) begin
+        tx_sending <= 1'b0;
+        tx_byte_ptr <= 5'd0;
+        tx_bit_cnt <= 3'd0;
+        tx_shift_reg <= 8'd0;
+        tx_done_pulse <= 1'b0;
+        test_frame_acked <= 1'b0;
+        detail_frame_acked <= 1'b0;
     end else begin
+        detail_frame_acked <= 1'b0;
         tx_done_pulse   <= 1'b0;
         test_frame_acked <= 1'b0;
 
@@ -664,8 +766,12 @@ always @(posedge clk or negedge rst_n) begin
                     // 发送完成
                     tx_sending   <= 1'b0;
                     tx_shift_reg <= 8'h00;
-                    tx_done_pulse <= 1'b1;
-                    test_frame_acked <= 1'b1;
+                    if (tx_is_detail) begin
+                        detail_frame_acked <= 1'b1;
+                    end else begin
+                        tx_done_pulse <= 1'b1;
+                        test_frame_acked <= 1'b1;
+                    end
                 end
             end else begin
                 tx_bit_cnt <= tx_bit_cnt + 1;

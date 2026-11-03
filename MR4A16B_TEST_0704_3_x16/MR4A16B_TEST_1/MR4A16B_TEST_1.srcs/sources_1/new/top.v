@@ -101,6 +101,8 @@ wire [22:0] spi_test_length;
 wire [31:0] spi_loop_count;
 wire [1:0]  spi_write_mode;
 wire [1:0]  spi_read_mode;
+wire [7:0]  spi_err_detail_print;
+wire detail_enabled = (spi_test_mode == 4'd2) && (spi_err_detail_print == 8'd1);
 wire [15:0] spi_t_avav_w;
 wire [15:0] spi_t_avqv_w;
 wire [15:0] spi_t_av2dv_w;
@@ -144,6 +146,11 @@ reg [15:0]  dout;
 reg [15:0]  dout_d1;
 reg [15:0]  dout_d2;
 reg [15:0]  dout_ref;
+reg [21:0] dout_ref_addr;
+wire detail_stall;
+reg [21:0] error_addr_snapshot;
+reg [15:0] error_data_snapshot;
+reg [15:0] error_expected_snapshot;
 
 reg [21:0]  addr;                                   
 reg [21:0]  addr_d;                                 
@@ -251,6 +258,7 @@ spi_protocol u_spi_protocol (
     .period_before_last_r(spi_period_before_last_r),
     .write_mode(spi_write_mode),
     .read_mode(spi_read_mode),
+    .err_detail_print(spi_err_detail_print),
     .t_avav_w(spi_t_avav_w),
     .t_avqv_w(spi_t_avqv_w),
     .t_av2dv_w(spi_t_av2dv_w),
@@ -279,15 +287,16 @@ spi_protocol u_spi_protocol (
     .t_lbl2lbh_r(spi_t_lbl2lbh_r),
     .start_test(spi_start_test),
     .tx_done_pulse(send_frame_ack),
+    .detail_stall(detail_stall),
     
     // 给spi模块的参数
     .current_loop(loop_idx),
     .test_busy(flg),
     .error_cnt(err_cnt),
     .err_flag(err_flg),
-    .error_addr(addr_d),
-    .error_data(RD_DATA),
-    .expected_data(dout_ref),
+    .error_addr(error_addr_snapshot),
+    .error_data(error_data_snapshot),
+    .expected_data(error_expected_snapshot),
     .test_complete(stop)// 测试完成信号
 );
 
@@ -383,6 +392,7 @@ always @(posedge clk or negedge rst_n) begin
         next_loop_start_d2 <= next_loop_start_d1 ;
         next_loop_start_d3 <= next_loop_start_d2 ;
   
+        if (!detail_stall) begin
         dout_d1     <= dout     ;
         dout_d2     <= dout_d1  ;
   
@@ -391,6 +401,8 @@ always @(posedge clk or negedge rst_n) begin
         rd_en_d     <= rd_en;
         rd_en_d2    <= rd_en_d;
         
+        end
+
         vio_TMODE_D1<= vio_TMODE;
         vio_TMODE_D2<= vio_TMODE_D1;
         
@@ -431,7 +443,7 @@ always @(posedge clk or negedge rstn) begin
         end
 
         // ---------- 2. 检测循环结束条件（与原逻辑完全一致） ----------
-        if (flg && (addr_is_last) && (hold_before_one)) begin
+        if (!detail_stall && flg && (addr_is_last) && (hold_before_one)) begin
             if (vio_TMODE == 4'd2 && rd_en_d) begin
                 if (!loop_finish) loop_finish <= 1'b1;
             end
@@ -462,6 +474,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         addr <= 22'd0;
+    else if(detail_stall)
+        addr <= addr;
     else if(start_d1!=0 && start_d1!=start_d2)
         addr <= vio_addr_ini;
      else if(flg && keep)
@@ -478,6 +492,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         addr_cnt <= 22'd0;
+    else if(detail_stall)
+        addr_cnt <= addr_cnt;
     else if(start_d1 != start_d2 || next_loop_start_d1)   // 增加 next_loop_start
         addr_cnt <= 22'd0;
     else if(keep && addr_is_last && hold_before_two)
@@ -493,6 +509,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         addr_hold_cnt <= 21'd0;
+    else if(detail_stall)
+        addr_hold_cnt <= addr_hold_cnt;
     else if(next_loop_start_d1)
         addr_hold_cnt <= 21'd0;
     else if((next_loop_start_d2 != 0 && next_loop_start_d2 != next_loop_start_d3) || (addr_cnt < vio_addr_num && addr_hold_cnt == vio_t_AVAV)) //next_loop start
@@ -511,6 +529,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         flg <= 1'b0;
+    else if(detail_stall)
+        flg <= flg;
     else if((start_d2 != 0 && start_d2 != start_d3) || next_loop_start_d1)   // 增加 next_loop_start
         flg <= 1'b1;
     else if(addr_cnt == vio_addr_num && addr_hold_cnt == vio_t_AVAV)
@@ -523,22 +543,50 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         dout_ref <= 16'h0;
+    else if(detail_stall)
+        dout_ref <= dout_ref;
     else if(addr_hold_cnt==vio_t_AVAV)
         dout_ref <= dout_d1;
     else
         dout_ref <= dout_ref;
 end
 
-//---
+// Keep the reference word paired with the address present when that word was
+// latched. The early compare uses the previous reference word, not necessarily
+// the address currently on the pins. The late compare uses current addr_d.
 always @(posedge clk or negedge rstn) begin
-    if(!rstn)
+    if (!rstn)
+        dout_ref_addr <= 22'd0;
+    else if (!detail_stall && addr_hold_cnt==vio_t_AVAV)
+        dout_ref_addr <= addr_d;
+end
+
+// Capture the actual comparison operands on the detection edge. The SPI
+// mailbox consumes this snapshot with err_flg on the following clock.
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) begin
         err_flg <= 1'b0;
-    else if(flg && rd_en_d && (addr_hold_cnt==vio_t_AVQV-vio_t_AVAV) && addr_d!=vio_addr_ini && RD_DATA!=dout_ref)
-        err_flg <= 1'b1;
-    else if(flg && rd_en_d && addr_hold_cnt==vio_t_AVQV && RD_DATA!=dout_d1)
-        err_flg <= 1'b1;
-    else
+        error_addr_snapshot <= 22'd0;
+        error_data_snapshot <= 16'd0;
+        error_expected_snapshot <= 16'd0;
+    end else if (detail_enabled && (spi_start_test || start_d1!=start_d2 || next_loop_start_d1)) begin
         err_flg <= 1'b0;
+    end else begin
+        err_flg <= 1'b0;
+        if (!detail_stall && flg && rd_en_d &&
+            (addr_hold_cnt==vio_t_AVQV-vio_t_AVAV) && addr_d!=vio_addr_ini && RD_DATA!=dout_ref) begin
+            err_flg <= 1'b1;
+            error_addr_snapshot <= dout_ref_addr;
+            error_data_snapshot <= RD_DATA;
+            error_expected_snapshot <= dout_ref;
+        end else if (!detail_stall && flg && rd_en_d &&
+                     addr_hold_cnt==vio_t_AVQV && RD_DATA!=dout_d1) begin
+            err_flg <= 1'b1;
+            error_addr_snapshot <= addr_d;
+            error_data_snapshot <= RD_DATA;
+            error_expected_snapshot <= dout_d1;
+        end
+    end
 end
 
 //---
@@ -558,6 +606,10 @@ always @(posedge clk or negedge rstn) begin
         trng_data_reg <= 8'd0;
         trng_valid_reg <= 1'b0;
     end
+    else if(detail_stall) begin
+        trng_data_reg <= trng_data_reg;
+        trng_valid_reg <= trng_valid_reg;
+    end
     else if(trng_valid) begin
         trng_data_reg <= trng_data;
         trng_valid_reg <= 1'b1;
@@ -571,6 +623,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         dout <= 16'h0;
+    else if(detail_stall)
+        dout <= dout;
     else if((start_d1!=0 && start_d1!=start_d2) || next_loop_start_d1)
         case(vio_din_sel)
             8'd1:   dout <= 16'h0;
@@ -602,6 +656,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_EN <= 1'b1;
+    else if(detail_stall)
+        R_EN <= R_EN;
     else if(vio_t_EH2EL==0 && keep && addr_d!=addr)
         R_EN <= 1'b0;
     else if(vio_t_EH2EL==0 && ((start_d2!=0 && start_d2!=start_d3) || (addr_d!=addr && addr!=0)))
@@ -618,6 +674,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_WN <= 1'b1;
+    else if(detail_stall)
+        R_WN <= R_WN;
     else if(vio_t_WH2WL==0 && keep && addr_d!=addr)
         R_WN <= 1'b0;
     else if(vio_t_WH2WL==0 && ((start_d2!=0 && start_d2!=start_d3) || (addr_d!=addr && addr!=0)))
@@ -634,6 +692,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_GN <= 1'b1;
+    else if(detail_stall)
+        R_GN <= R_GN;
     else if(vio_t_GH2GL==0 && keep && addr_d!=addr)
         R_GN <= 1'b0;
     else if(vio_t_GH2GL==0 && ((start_d2!=0 && start_d2!=start_d3) || (addr_d!=addr && addr!=0)))
@@ -650,6 +710,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_UBN <= 1'b1;
+    else if(detail_stall)
+        R_UBN <= R_UBN;
     else if(vio_t_UBH2UBL==0 && keep && addr_d!=addr)
         R_UBN <= 1'b0;
     else if(vio_t_UBH2UBL==0 && ((start_d2!=0 && start_d2!=start_d3) || (addr_d!=addr && addr!=0)))
@@ -666,6 +728,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_LBN <= 1'b1;
+    else if(detail_stall)
+        R_LBN <= R_LBN;
     else if(vio_t_LBH2LBL==0 && keep && addr_d!=addr)
         R_LBN <= 1'b0;
     else if(vio_t_LBH2LBL==0 && ((start_d2!=0 && start_d2!=start_d3) || (addr_d!=addr && addr!=0)))
@@ -682,6 +746,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_DQ <= 16'h0;
+    else if(detail_stall)
+        R_DQ <= R_DQ;
     else if(rd_en_d)
         R_DQ <= 16'hz;
     else if(vio_t_AV2DV==0 && keep && addr_d!=addr)
@@ -702,6 +768,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         keep <= 1'b0;
+    else if(detail_stall)
+        keep <= keep;
     else if(start_d2 == 0 && start_d1 == 1) begin
         keep <= 1'b1;                      // 测试开始允许地址访问
     end
@@ -723,6 +791,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         rd_en <= 1'b0;
+    else if(detail_stall)
+        rd_en <= rd_en;
     else begin
         case(vio_TMODE)
             4'd0: begin  // 写

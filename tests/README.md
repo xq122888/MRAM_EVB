@@ -1,5 +1,9 @@
 # SPI report regression
 
+The 25-byte detailed-error reporting feature and its build/board checks are
+documented in [detailed-error-log.md](detailed-error-log.md). Run its additional
+protocol and full-controller regression with `bash tests/run_spi_detail.sh`.
+
 Run with Icarus Verilog 12 and `vvp` on PATH:
 
 ```sh
