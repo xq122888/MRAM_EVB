@@ -575,7 +575,8 @@ end
 reg [4:0]  tx_byte_ptr;
 reg [2:0]  tx_bit_cnt;
 reg [7:0]  tx_shift_reg;
-reg        miso_out_pre;
+// Retain the observation point used by the existing MRAM testbench.
+wire       miso_out_pre = tx_shift_reg[7];
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -583,7 +584,6 @@ always @(posedge clk or negedge rst_n) begin
         tx_byte_ptr     <= 5'd0;
         tx_bit_cnt      <= 3'd0;
         tx_shift_reg    <= 8'h00;
-        miso_out_pre    <= 1'b0;
         tx_done_pulse   <= 1'b0;
         test_frame_acked <= 1'b0;
     end else begin
@@ -595,13 +595,11 @@ always @(posedge clk or negedge rst_n) begin
             tx_byte_ptr  <= 5'd0;
             tx_bit_cnt   <= 3'd0;
             tx_shift_reg <= tx_buf[0];    // 加载第一个字节
-            miso_out_pre <= 1'b0;
             tx_sending   <= 1'b1;
         end
 
         // SPI 移位发送
         if (tx_sending && spi_shift_en) begin
-            miso_out_pre <= tx_shift_reg[6];
             tx_shift_reg <= {tx_shift_reg[6:0], 1'b0};
 
             if (tx_bit_cnt == 3'd7) begin
@@ -613,7 +611,6 @@ always @(posedge clk or negedge rst_n) begin
                     // 发送完成
                     tx_sending   <= 1'b0;
                     tx_shift_reg <= 8'h00;
-                    miso_out_pre <= 1'b0;
                     tx_done_pulse <= 1'b1;
                     test_frame_acked <= 1'b1;
                 end
@@ -626,13 +623,15 @@ always @(posedge clk or negedge rst_n) begin
         if (cs_n_pos && tx_sending) begin
             tx_sending   <= 1'b0;
             tx_bit_cnt   <= 3'd0;
-            miso_out_pre <= 1'b0;
             tx_shift_reg <= 8'h00;
         end
     end
 end
 
 // ---------- 8.5 MISO 引脚输出 ----------
-assign spi_miso = (!spi_cs_n && tx_sending) ? (spi_shift_en ? miso_out_pre : tx_shift_reg[7]) : 1'b0;
+// The shift register already holds the next MISO bit, including byte reloads.
+// Do not mux it with a second register using the SCLK edge-detect pulse: that
+// select and both data inputs change on the same clk edge at byte boundaries.
+assign spi_miso = (!spi_cs_n && tx_sending) ? tx_shift_reg[7] : 1'b0;
 
 endmodule
