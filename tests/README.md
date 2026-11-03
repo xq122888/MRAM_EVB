@@ -206,3 +206,58 @@ The frame wire format and MRAM clock period remain unchanged. The timing-bundle
 collector now also includes report_cdc -details for implementation review;
 CDC reports alone do not establish external setup/hold margins for unclocked
 input ports. Verify actual physical margins and observed SPI bytes on hardware.
+
+### Predecode configuration terminal values
+
+After reloading the implementation for 4820850, the report shows WNS -1.032 ns,
+TNS -67.776 ns and 189 failing endpoints. This corrects the earlier stale
+checkpoint report, which repeated the 36fa661 paths exactly. The corresponding
+uploaded SPI trace has 500 consecutive ordinal reports with zero mismatches;
+that sample does not establish timing closure or long-run reliability.
+
+The grouped lookahead implementation increased routed delay on counter
+feedback. The next revision replaces those groups with native data increments
+and moves terminal-value subtraction into the configuration decoder:
+
+- last_loop_index = loop_count - 1 (32-bit unsigned, including zero count).
+- last_test_address = low 21 bits of test_length - 1. The existing 21-bit
+  address-count truncation and its zero-length guard are preserved.
+- Read/write period-minus-one/two values, including the existing 10-cycle
+  fallback for write_mode 3 and explicit zero/one guards in top.v.
+
+Base and decoded parameters are committed atomically. A registered configuration
+write enable separates checksum/state decoding from the high-fanout parameter
+register enables; it commits one processing-clock cycle later than before,
+well before the following frame-tail byte can assert start_test. SPI input
+synchronization and registered next-loop signaling from 4820850 are retained.
+No runtime test step or MRAM clock period is added or changed.
+
+run_top_timing.sh still compares against the original controller over 617,129
+cycles and checks 342,144 boundary cases. Its abstract configuration fixtures now
+supply coherent base/decoded values. run_spi_reports.sh independently exercises
+the REAL serial configuration decoder: 518 report polls plus 11 configuration
+checks, all write modes including fallback, period values 0/1/2/255, 32-bit loop
+limits, address truncation boundaries, per-clock atomicity, start-after-commit,
+and rejection of a bad checksum. Only these functional results are cloud-
+validated; the new implementation must still demonstrate routed timing closure.
+
+The report collector now includes checkout HEAD, project/source paths, run
+status/strategy and a loaded-design register signature. Before collecting a new
+implementation result, explicitly reload it to avoid a cached open design:
+
+```tcl
+close_design
+open_run impl_2
+source E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/tests/collect_spi_timing.tcl
+```
+
+Run metadata is diagnostic evidence, not proof of which bitstream was programmed.
+Keep a copy of the programmed bitstream and associated reports when comparing
+board results. Review CDC/reset and external input/output timing separately.
+
+The controller runner also executes tb_top_spi_reports.sv: 10 end-to-end reports
+across write/read/write-read modes using actual top.v SPI configuration, decoded
+threshold connections, test-start, completion, and ACK-driven loop advancement.
+This test does not force configuration/threshold wires. It uses the documented
+ideal clock/TRNG fixtures and constant-zero read bus, so it validates digital
+protocol/control integration rather than physical MRAM behavior.

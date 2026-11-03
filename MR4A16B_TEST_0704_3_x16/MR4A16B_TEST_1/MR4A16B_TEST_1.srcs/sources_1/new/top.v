@@ -182,83 +182,28 @@ reg          loop_finish_d1;
 (*mark_debug="true"*)reg   next_loop_start_d3;
 
 
-// Partition increments into four-bit groups with carry lookahead from the
-// source counter. Preserving each group avoids a 23/32-bit serial carry chain.
-wire [22:0] addr_cnt_inc;
-wire [31:0] loop_idx_inc;
-generate
-    genvar inc_group;
-    for (inc_group=0; inc_group<8; inc_group=inc_group+1) begin : loop_increment
-        wire carry_in;
-        if (inc_group==0) begin : first_group
-            assign carry_in = 1'b1;
-        end else begin : later_group
-            assign carry_in = &loop_idx[inc_group*4-1:0];
-        end
-        (* keep = "true" *) wire [3:0] value =
-            loop_idx[inc_group*4 +: 4] + {3'b0,carry_in};
-        assign loop_idx_inc[inc_group*4 +: 4] = value;
-    end
-    for (inc_group=0; inc_group<6; inc_group=inc_group+1) begin : addr_increment
-        wire carry_in;
-        if (inc_group==0) begin : first_group
-            assign carry_in = 1'b1;
-        end else begin : later_group
-            assign carry_in = &addr_cnt[inc_group*4-1:0];
-        end
-        if (inc_group==5) begin : last_group
-            (* keep = "true" *) wire [2:0] value =
-                addr_cnt[22:20] + {2'b0,carry_in};
-            assign addr_cnt_inc[22:20] = value;
-        end else begin : full_group
-            (* keep = "true" *) wire [3:0] value =
-                addr_cnt[inc_group*4 +: 4] + {3'b0,carry_in};
-            assign addr_cnt_inc[inc_group*4 +: 4] = value;
-        end
-    end
-endgenerate
+// The configuration decoder commits these thresholds together with the base
+// parameters. No variable subtraction or increment precedes the runtime test.
+wire [31:0] spi_last_loop_index;
+wire [20:0] spi_last_test_address;
+wire [15:0] spi_period_last_w, spi_period_last_r;
+wire [15:0] spi_period_before_last_w, spi_period_before_last_r;
+wire [15:0] period_last = rd_en_d2 ? spi_period_last_r : spi_period_last_w;
+wire [15:0] period_before_last = rd_en_d2 ?
+    spi_period_before_last_r : spi_period_before_last_w;
+
+// Native FPGA carry chains are used only for the data increment, independently
+// of its enable. The terminal decisions do not consume the increment result.
+(* keep = "true" *) wire [22:0] addr_cnt_inc = addr_cnt + 23'd1;
+(* keep = "true" *) wire [31:0] loop_idx_inc = loop_idx + 32'd1;
 (* keep = "true" *) wire [31:0] err_cnt_inc = err_cnt + 32'd1;
-
-// Precompare both carry choices in parallel. A carry from a low group then
-// selects a one-bit match; it no longer has to traverse an upper-group adder
-// and equality logic before reaching the control enables.
-wire [3:0] hold_one_match;
-wire [3:0] hold_two_match;
-generate
-    genvar hold_group;
-    for (hold_group=0; hold_group<4; hold_group=hold_group+1) begin : hold_compare
-        (* keep = "true" *) wire same_match =
-            (addr_hold_cnt[hold_group*4 +: 4] == vio_t_AVAV[hold_group*4 +: 4]);
-        (* keep = "true" *) wire [3:0] plus_one =
-            addr_hold_cnt[hold_group*4 +: 4] + 4'd1;
-        (* keep = "true" *) wire plus_match =
-            (plus_one == vio_t_AVAV[hold_group*4 +: 4]);
-        if (hold_group==0) begin : low_group
-            (* keep = "true" *) wire [3:0] plus_two = addr_hold_cnt[3:0] + 4'd2;
-            assign hold_one_match[0] = plus_match;
-            assign hold_two_match[0] = (plus_two == vio_t_AVAV[3:0]);
-        end else begin : high_group
-            assign hold_one_match[hold_group] =
-                (&addr_hold_cnt[hold_group*4-1:0]) ? plus_match : same_match;
-            assign hold_two_match[hold_group] =
-                (&addr_hold_cnt[hold_group*4-1:1]) ? plus_match : same_match;
-        end
-    end
-endgenerate
-// Exclude modulo-16-bit wraparound to retain the original widened arithmetic.
 wire hold_before_one = (vio_t_AVAV >= 16'd1) &&
-    (addr_hold_cnt[20:16] == 5'd0) && (&hold_one_match);
+    (addr_hold_cnt == period_last);
 wire hold_before_two = (vio_t_AVAV >= 16'd2) &&
-    (addr_hold_cnt[20:16] == 5'd0) && (&hold_two_match);
-// The address limit is 21 bits; the zero guard excludes wraparound of the
-// 23-bit increment, matching addr_cnt + 1 == vio_addr_num for every value.
-wire addr_is_last = (vio_addr_num != 21'd0) && (addr_cnt_inc == vio_addr_num);
-
-// Equivalent to loop_idx < loop_count - 1, including loop_count == 0.
-// This removes subtraction of loop_count ahead of the update decision.
-wire loop_has_more = (loop_count == 32'd0) ?
-    (loop_idx != 32'hffffffff) :
-    ((loop_idx < loop_count) && (loop_idx_inc != loop_count));
+    (addr_hold_cnt == period_before_last);
+wire addr_is_last = (vio_addr_num != 21'd0) && (addr_cnt == spi_last_test_address);
+// Zero loop_count retains the original unsigned loop_count - 1 behavior.
+wire loop_has_more = (loop_idx < spi_last_loop_index);
 
 // ========== SPI协议模块实例化 ==========
 spi_protocol u_spi_protocol (
@@ -276,6 +221,12 @@ spi_protocol u_spi_protocol (
     .start_addr(spi_start_addr),
     .test_length(spi_test_length),
     .loop_count(spi_loop_count),
+    .last_loop_index(spi_last_loop_index),
+    .last_test_address(spi_last_test_address),
+    .period_last_w(spi_period_last_w),
+    .period_before_last_w(spi_period_before_last_w),
+    .period_last_r(spi_period_last_r),
+    .period_before_last_r(spi_period_before_last_r),
     .write_mode(spi_write_mode),
     .read_mode(spi_read_mode),
     .t_avav_w(spi_t_avav_w),

@@ -7,7 +7,13 @@ module tb_spi_reports;
   integer ack_count=0, frames=0;
   reg [7:0] cfg [0:23];
   reg [7:0] got;
-  integer i,half_period;
+  integer i,half_period,config_checks=0;
+  reg [31:0] config_loops=1;
+  reg [22:0] config_length=256;
+  reg [7:0] config_period=7;
+  reg [1:0] config_write_mode=1;
+  reg bad_checksum=0;
+  reg [3:0] expected_test_mode=0;
   always #2.5 clk=~clk;
   always @(posedge clk) if (ack) ack_count=ack_count+1;
   spi_protocol dut(.clk(clk),.rst_n(rst_n),.spi_sclk(sclk),
@@ -16,6 +22,23 @@ module tb_spi_reports;
     .error_cnt(32'h12345678),.err_flag(1'b1),.error_addr(22'd0),
     .error_data(16'd0),.expected_data(16'd0),.test_complete(complete),
     .tx_done_pulse(ack));
+  // Base and decoded parameters must remain coherent on EVERY clock,
+  // including the configuration commit edge, not merely after startup.
+  always @(posedge clk) begin
+    #1;
+    if(rst_n) begin
+      if(dut.start_test && (bad_checksum || dut.test_mode!==expected_test_mode ||
+         dut.loop_count!==config_loops || dut.test_length!==config_length))
+        $fatal(1,"Test started before the new configuration was committed");
+      if(dut.last_loop_index !== (dut.loop_count-32'd1) ||
+         dut.last_test_address !== (dut.test_length[20:0]-21'd1) ||
+         dut.period_last_w !== (dut.t_avav_w-16'd1) ||
+         dut.period_before_last_w !== (dut.t_avav_w-16'd2) ||
+         dut.period_last_r !== (dut.t_avav_r-16'd1) ||
+         dut.period_before_last_r !== (dut.t_avav_r-16'd2))
+        $fatal(1,"Decoded configuration is not atomic with base parameters");
+    end
+  end
   task byte_io(input [7:0] data, output [7:0] result);
     integer b;
     begin
@@ -28,17 +51,35 @@ module tb_spi_reports;
   endtask
   task configure(input [3:0] mode);
     reg [7:0] sum, unused;
+    reg [255:0] previous_config;
     integer n;
     begin
+      expected_test_mode=mode;
+      previous_config={dut.test_mode,dut.test_length,dut.loop_count,dut.t_avav_w,
+        dut.t_avav_r,dut.last_loop_index,dut.last_test_address,dut.period_last_w,
+        dut.period_before_last_w,dut.period_last_r,dut.period_before_last_r};
       for(n=0;n<24;n=n+1) cfg[n]=0;
       cfg[0]=8'h55;cfg[1]=8'h83;cfg[2]=mode;cfg[3]=1;
-      cfg[9]=1;cfg[12]=1;cfg[16]=7;cfg[17]=1;cfg[18]=1;
+      cfg[8]=config_length[7:0];cfg[9]=config_length[15:8];
+      cfg[10]={1'b0,config_length[22:16]};
+      cfg[12]=config_loops[7:0];cfg[13]=config_loops[15:8];
+      cfg[14]=config_loops[23:16];cfg[15]=config_loops[31:24];
+      cfg[16]=config_period;cfg[17]={6'b0,config_write_mode};cfg[18]=1;
       sum=0;for(n=1;n<=21;n=n+1) sum=sum+cfg[n];
-      cfg[22]=sum;cfg[23]=8'haa;
+      cfg[22]=bad_checksum ? (sum^8'h01) : sum;cfg[23]=8'haa;
       cs_n=0;#100;
       for(n=0;n<24;n=n+1) byte_io(cfg[n],unused);
       #100;cs_n=1;#200;
-      if(dut.test_mode!==mode || dut.test_length!==256)
+      config_checks=config_checks+1;
+      if(bad_checksum) begin
+        if({dut.test_mode,dut.test_length,dut.loop_count,dut.t_avav_w,
+            dut.t_avav_r,dut.last_loop_index,dut.last_test_address,dut.period_last_w,
+            dut.period_before_last_w,dut.period_last_r,dut.period_before_last_r}
+           !==previous_config)
+          $fatal(1,"Bad checksum changed the committed configuration");
+      end else if(dut.test_mode!==mode || dut.test_length!==config_length ||
+                  dut.loop_count!==config_loops || dut.t_avav_r!=={8'b0,config_period} ||
+                  dut.t_avav_w!==((config_write_mode==3)?16'd10:{8'b0,config_period}))
         $fatal(1,"Configuration RX failed mode=%d length=%d",dut.test_mode,dut.test_length);
     end
   endtask
@@ -94,7 +135,23 @@ module tb_spi_reports;
       #1;
     end
     configure(2);loop_no=32'h12345678;notify;poll(17,0);poll(0,0);
-    $display("PASS: %0d SPI polls; sequential reports, byte boundaries, abort/retry, idle padding, 17-byte report",frames);
+    for(i=0;i<8;i=i+1) begin
+      config_write_mode=i%4;
+      case(i)
+        0:begin config_period=0;config_loops=0;config_length=0;end
+        1:begin config_period=1;config_loops=1;config_length=1;end
+        2:begin config_period=2;config_loops=2;config_length=2;end
+        3:begin config_period=255;config_loops=32'hffffffff;config_length=23'h7fffff;end
+        4:begin config_period=7;config_loops=32'h00010000;config_length=23'h200000;end
+        5:begin config_period=35;config_loops=32'h01000000;config_length=23'h1fffff;end
+        6:begin config_period=128;config_loops=32'h80000000;config_length=23'h200001;end
+        7:begin config_period=42;config_loops=32'h12345678;config_length=256;end
+      endcase
+      configure(i%3);
+    end
+    bad_checksum=1;config_period=99;config_loops=9;config_length=123;
+    configure(2);
+    $display("PASS: %0d SPI polls; %0d configuration checks with atomic decoded thresholds and bad-checksum retention",frames,config_checks);
     $finish;
   end
   initial begin #200000000; $fatal(1,"Watchdog expired"); end

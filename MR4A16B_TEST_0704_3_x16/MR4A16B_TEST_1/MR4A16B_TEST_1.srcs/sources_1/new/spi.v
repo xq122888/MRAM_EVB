@@ -23,6 +23,13 @@ module spi_protocol #(
     output reg [21:0] start_addr,
     output reg [22:0] test_length,
     output reg [31:0] loop_count,
+    // Decode terminal values at the same configuration commit as their bases.
+    output reg [31:0] last_loop_index,
+    output reg [20:0] last_test_address,
+    output reg [15:0] period_last_w,
+    output reg [15:0] period_before_last_w,
+    output reg [15:0] period_last_r,
+    output reg [15:0] period_before_last_r,
     output reg [1:0]  write_mode,
     output reg [1:0]  read_mode,
     output reg [7:0]  err_detail_print,
@@ -347,6 +354,19 @@ end
 // =========================================================================
 // 7. 正式配置生效模块 (仅在Checksum验证成功时更新输出)
 // =========================================================================
+// Register the configuration write enable. This separates checksum/state
+// decode from the high-fanout enables of the base and predecoded registers.
+// Temporary fields remain stable; the frame tail/start follows a full SPI byte
+// later, so all parameters are committed before start_test is asserted.
+reg config_commit;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        config_commit <= 1'b0;
+    else
+        config_commit <= spi_data_valid_d2 && (rx_state == 5'd22) &&
+                         (calc_checksum == spi_rx_data);
+end
+
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         chip_type    <= 8'b10000000; 
@@ -355,6 +375,12 @@ always @(posedge clk or negedge rst_n) begin
 		start_addr   <= 22'd0;
         test_length  <= 23'd0;       
 		loop_count   <= 32'd1;
+        last_loop_index <= 32'd0;
+        last_test_address <= 21'h1fffff;
+        period_last_w <= 16'd9;
+        period_before_last_w <= 16'd8;
+        period_last_r <= 16'd9;
+        period_before_last_r <= 16'd8;
         write_mode   <= 2'd0;        
 		read_mode    <= 2'd0;
 		err_detail_print <= 8'd0;
@@ -376,7 +402,7 @@ always @(posedge clk or negedge rst_n) begin
 		t_gh2gl_r <= 0; t_gl2gh_r <= 10;
         t_ubh2ubl_r <= 0; t_ubl2ubh_r <= 10; 
 		t_lbh2lbl_r <= 0; t_lbl2lbh_r <= 10;
-    end else if (spi_data_valid_d2 && rx_state == 22 && calc_checksum == spi_rx_data) begin
+    end else if (config_commit) begin
         // 校验成功，将临时寄存器的值赋给正式输出引脚
         chip_type       <= chip_type_reg;
         test_mode       <= t_mode_reg;
@@ -384,6 +410,14 @@ always @(posedge clk or negedge rst_n) begin
         start_addr      <= addr_ini_reg[21:0];
         test_length     <= addr_num_reg[22:0];
         loop_count       <= loop_cnt_reg;
+        last_loop_index <= loop_cnt_reg - 32'd1;
+        // top.v historically uses the low 21 bits of test_length.
+        last_test_address <= addr_num_reg[20:0] - 21'd1;
+        period_last_r <= t_avav_reg - 16'd1;
+        period_before_last_r <= t_avav_reg - 16'd2;
+        // Invalid write_mode uses the existing 10-cycle fallback below.
+        period_last_w <= (write_mode_reg == 2'b11) ? 16'd9 : (t_avav_reg - 16'd1);
+        period_before_last_w <= (write_mode_reg == 2'b11) ? 16'd8 : (t_avav_reg - 16'd2);
         write_mode       <= write_mode_reg;
         read_mode        <= read_mode_reg;
         t_avav_w         <= t_avav_reg;

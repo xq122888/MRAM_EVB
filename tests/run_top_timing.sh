@@ -28,3 +28,8 @@ timeout 180 "$vvp_bin" "$output_dir/top.vvp"
   -o "$output_dir/predicates.vvp" "$repo_dir/tests/tb_top_timing.sv" \
   "$src/top.v" "$src/spi.v" "$src/SPI_Slave.v"
 timeout 60 "$vvp_bin" "$output_dir/predicates.vvp"
+
+"$iverilog_bin" "${compiler_args[@]}" -g2012 -s tb_top_spi_reports \
+  -o "$output_dir/end_to_end.vvp" "$repo_dir/tests/tb_top_timing.sv" \
+  "$repo_dir/tests/tb_top_spi_reports.sv" "$src/top.v" "$src/spi.v" "$src/SPI_Slave.v"
+timeout 60 "$vvp_bin" "$output_dir/end_to_end.vvp"

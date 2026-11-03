@@ -21,6 +21,10 @@ module tb_top_timing;
   wire en_new,en_ref,wn_new,wn_ref,gn_new,gn_ref;
   wire ub_new,ub_ref,lb_new,lb_ref,err_new,err_ref;
   wire [21:0] addr_new,addr_ref;
+  wire [31:0] decoded_last_loop=loops-32'd1;
+  wire [20:0] decoded_last_address=length-21'd1;
+  wire [15:0] decoded_period_last=period-16'd1;
+  wire [15:0] decoded_period_before_last=period-16'd2;
   reg checking=0;
   integer cycles=0,advances=0,finished=0,n,m,t,trial;
   reg [31:0] seed;
@@ -40,6 +44,12 @@ module tb_top_timing;
     force dut.vio_addr_num=length; force refdut.vio_addr_num=length;
     force dut.vio_t_AVAV=period; force refdut.vio_t_AVAV=period;
     force dut.loop_count=loops; force refdut.loop_count=loops;
+    force dut.spi_last_loop_index=decoded_last_loop;
+    force dut.spi_last_test_address=decoded_last_address;
+    force dut.spi_period_last_w=decoded_period_last;
+    force dut.spi_period_last_r=decoded_period_last;
+    force dut.spi_period_before_last_w=decoded_period_before_last;
+    force dut.spi_period_before_last_r=decoded_period_before_last;
     force dut.vio_din_sel=3; force refdut.vio_din_sel=3;
   end
   always @(posedge clk) begin
@@ -123,6 +133,10 @@ module tb_top_predicates;
   reg [22:0] count=0;
   reg [15:0] period=0;
   reg [31:0] index=0,loops=0;
+  wire [31:0] decoded_last_loop=loops-32'd1;
+  wire [20:0] decoded_last_address=length-21'd1;
+  wire [15:0] decoded_period_last=period-16'd1;
+  wire [15:0] decoded_period_before_last=period-16'd2;
   integer n,k,cases=0;
   top dut(.clkp(1'b0),.clkn(1'b1),.rst_n(1'b0),.spi_cs_n(1'b1),
           .spi_sclk(1'b0),.spi_mosi(1'b0));
@@ -130,6 +144,12 @@ module tb_top_predicates;
     force dut.addr_hold_cnt=hold;force dut.vio_t_AVAV=period;
     force dut.addr_cnt=count;force dut.vio_addr_num=length;
     force dut.loop_idx=index;force dut.loop_count=loops;
+    force dut.spi_last_loop_index=decoded_last_loop;
+    force dut.spi_last_test_address=decoded_last_address;
+    force dut.spi_period_last_w=decoded_period_last;
+    force dut.spi_period_last_r=decoded_period_last;
+    force dut.spi_period_before_last_w=decoded_period_before_last;
+    force dut.spi_period_before_last_r=decoded_period_before_last;
   end
   task check;
     begin
