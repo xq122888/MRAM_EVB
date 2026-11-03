@@ -1,0 +1,12 @@
+#-----------------------------------------------------------
+# Vivado v2018.3 (64-bit)
+# SW Build 2405991 on Thu Dec  6 23:38:27 MST 2018
+# IP Build 2404404 on Fri Dec  7 01:43:56 MST 2018
+# Start of session at: Sat Jul  4 14:28:17 2026
+# Process ID: 12948
+# Current directory: E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.runs/synth_2
+# Command line: vivado.exe -log top.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source top.tcl
+# Log file: E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.runs/synth_2/top.vds
+# Journal file: E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.runs/synth_2\vivado.jou
+#-----------------------------------------------------------
+source top.tcl -notrace

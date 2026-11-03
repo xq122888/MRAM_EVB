@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<Runs Version="1" Minor="0">
+	<Run Id="clk_wiz_0_synth_1" LaunchDir="E:/06_MramTestBoard/MRAM_Parallel_Test/35t/MR4A16B_TEST_1_0625- spi - 2 35t/MR4A16B_TEST_1/MR4A16B_TEST_1.runs/clk_wiz_0_synth_1" FlowId="Vivado_Synthesis" FromStepId="vivado" ToStepId="vivado"/>
+	<Run Id="synth_2" LaunchDir="E:/06_MramTestBoard/MRAM_Parallel_Test/35t/MR4A16B_TEST_1_0625- spi - 2 35t/MR4A16B_TEST_1/MR4A16B_TEST_1.runs/synth_2" FlowId="Vivado_Synthesis" FromStepId="vivado" ToStepId="vivado">
+		<Parent Id="clk_wiz_0_synth_1"/>
+	</Run>
+	<Parameters>
+		<Parameter Name="runs.monitorLSFJobs" Val="true" Type="bool"/>
+	</Parameters>
+</Runs>
+

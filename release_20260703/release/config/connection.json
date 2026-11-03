@@ -1,0 +1,28 @@
+{
+  "uart": {
+    "portName": "COM5",
+    "baudRate": 115200,
+    "dataBits": 8,
+    "stopBits": "one",
+    "parity": "none",
+    "writeTimeoutMs": 500,
+    "readTimeoutMs": 500,
+    "byteTimeout100us": 0
+  },
+  "spi": {
+    "deviceIndex": 0,
+    "frequencyHz": 4500000,
+    "mode": "mode0",
+    "byteOrder": "msb",
+    "dataBits": "eight",
+    "chipSelect": "cs1",
+    "csActiveLow": true,
+    "autoDeactivateCs": true,
+    "activeDelayUs": 0,
+    "delayDeactivateUs": 0,
+    "writeReadIntervalUs": 0,
+    "dummyByte": 255,
+    "writeTimeoutMs": 2000,
+    "readTimeoutMs": 2000
+  }
+}

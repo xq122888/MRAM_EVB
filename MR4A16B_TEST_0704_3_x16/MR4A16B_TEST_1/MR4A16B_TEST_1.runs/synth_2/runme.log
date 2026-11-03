@@ -1,0 +1,847 @@
+
+*** Running vivado
+    with args -log top.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source top.tcl
+
+
+****** Vivado v2018.3 (64-bit)
+  **** SW Build 2405991 on Thu Dec  6 23:38:27 MST 2018
+  **** IP Build 2404404 on Fri Dec  7 01:43:56 MST 2018
+    ** Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
+
+source top.tcl -notrace
+Command: synth_design -top top -part xc7a35tfgg484-1
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7a35t'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7a35t'
+INFO: Launching helper process for spawning children vivado processes
+INFO: Helper process launched with PID 12040 
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.950 . Memory (MB): peak = 467.945 ; gain = 99.824
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'top' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:4]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:15]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:16]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:17]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:18]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:19]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:20]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:21]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:22]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:142]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:150]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:152]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:153]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:155]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:156]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:169]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:170]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:173]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:175]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:177]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:180]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:181]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:182]
+INFO: [Synth 8-6157] synthesizing module 'clk_wiz_0' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.runs/synth_2/.Xil/Vivado-12948-DESKTOP-5H9PV2I/realtime/clk_wiz_0_stub.v:5]
+INFO: [Synth 8-6155] done synthesizing module 'clk_wiz_0' (1#1) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.runs/synth_2/.Xil/Vivado-12948-DESKTOP-5H9PV2I/realtime/clk_wiz_0_stub.v:5]
+INFO: [Synth 8-6157] synthesizing module 'spi_protocol' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:3]
+	Parameter CLK_FREQUENCE bound to: 200000000 - type: integer 
+	Parameter SPI_FREQUENCE bound to: 5000000 - type: integer 
+	Parameter DATA_WIDTH bound to: 8 - type: integer 
+	Parameter CPOL bound to: 0 - type: integer 
+	Parameter CPHA bound to: 0 - type: integer 
+	Parameter FRAME_HEADER bound to: 8'b01010101 
+	Parameter FRAME_TAIL bound to: 8'b10101010 
+	Parameter STOP_CMD bound to: 8'b11111111 
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:63]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:64]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:65]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:122]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:123]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:187]
+INFO: [Synth 8-6157] synthesizing module 'SPI_Slave' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/SPI_Slave.v:4]
+	Parameter CLK_FREQUENCE bound to: 200000000 - type: integer 
+	Parameter SPI_FREQUENCE bound to: 5000000 - type: integer 
+	Parameter DATA_WIDTH bound to: 8 - type: integer 
+	Parameter CPOL bound to: 0 - type: integer 
+	Parameter CPHA bound to: 0 - type: integer 
+	Parameter SFIFT_NUM bound to: 4 - type: integer 
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/SPI_Slave.v:16]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/SPI_Slave.v:17]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/SPI_Slave.v:18]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/SPI_Slave.v:19]
+INFO: [Synth 8-5534] Detected attribute (* mark_debug = "true" *) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/SPI_Slave.v:20]
+INFO: [Synth 8-6155] done synthesizing module 'SPI_Slave' (2#1) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/SPI_Slave.v:4]
+INFO: [Synth 8-155] case statement is not full and has no default [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:287]
+WARNING: [Synth 8-6014] Unused sequential element stop_cmd_detected_reg was removed.  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:193]
+WARNING: [Synth 8-6014] Unused sequential element rx_byte_cnt_reg was removed.  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:228]
+WARNING: [Synth 8-6014] Unused sequential element pending_stop_reg was removed.  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:505]
+WARNING: [Synth 8-5788] Register tx_buf_reg[0] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[1] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[2] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[3] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[4] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[5] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[6] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[7] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[8] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[9] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[10] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[11] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[12] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[13] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[14] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[15] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-5788] Register tx_buf_reg[16] in module spi_protocol is has both Set and reset with same priority. This may cause simulation mismatches. Consider rewriting code  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:534]
+WARNING: [Synth 8-3848] Net tx_buf[17] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[18] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[19] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[20] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[21] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[22] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[23] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[24] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[25] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[26] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[27] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[28] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[29] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[30] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+WARNING: [Synth 8-3848] Net tx_buf[31] in module/entity spi_protocol does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:514]
+INFO: [Synth 8-6155] done synthesizing module 'spi_protocol' (3#1) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:3]
+WARNING: [Synth 8-350] instance 'u_spi_protocol' of module 'spi_protocol' requires 55 connections, but only 50 given [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:186]
+INFO: [Synth 8-6157] synthesizing module 'trng_8bit' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/trng_ro.v:4]
+	Parameter RO_LENGTH bound to: 5 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'trng_8bit' (4#1) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/trng_ro.v:4]
+WARNING: [Synth 8-6014] Unused sequential element start_d4_reg was removed.  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:304]
+WARNING: [Synth 8-6014] Unused sequential element dout_d2_reg was removed.  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:313]
+WARNING: [Synth 8-6014] Unused sequential element addr_cnt_d_reg was removed.  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:316]
+WARNING: [Synth 8-6014] Unused sequential element trng_valid_reg_reg was removed.  [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:506]
+WARNING: [Synth 8-3848] Net vio_CMOS_SW in module/entity top does not have driver. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:132]
+INFO: [Synth 8-6155] done synthesizing module 'top' (5#1) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v:4]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port test_busy
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port test_done
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[21]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[20]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[19]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[18]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[17]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[16]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[15]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[14]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[13]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[12]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[11]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[10]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[9]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[8]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[7]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[6]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[5]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[4]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[3]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[2]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[1]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[0]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[15]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[14]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[13]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[12]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[11]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[10]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[9]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[8]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[7]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[6]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[5]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[4]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[3]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[2]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[1]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[0]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[15]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[14]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[13]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[12]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[11]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[10]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[9]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[8]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[7]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[6]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[5]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[4]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[3]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[2]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[1]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[0]
+WARNING: [Synth 8-3331] design top has unconnected port CMOS_SW
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:01 ; elapsed = 00:00:01 . Memory (MB): peak = 527.691 ; gain = 159.570
+---------------------------------------------------------------------------------
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:01 ; elapsed = 00:00:02 . Memory (MB): peak = 527.691 ; gain = 159.570
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:01 ; elapsed = 00:00:02 . Memory (MB): peak = 527.691 ; gain = 159.570
+---------------------------------------------------------------------------------
+INFO: [Device 21-403] Loading part xc7a35tfgg484-1
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Parsing XDC File [e:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0/clk_wiz_0_in_context.xdc] for cell 'u_clk_wiz_0'
+Finished Parsing XDC File [e:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0/clk_wiz_0_in_context.xdc] for cell 'u_clk_wiz_0'
+Parsing XDC File [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc]
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/ro_chain_0_i/I0' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:19]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/ro_chain_0_i/O' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:19]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/ro_chain_2_i/I0' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:19]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/ro_chain_2_i/O' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:19]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/ro_chain_4_i/I0' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:19]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/ro_chain_4_i/O' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:19]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+CRITICAL WARNING: [Constraints 18-512] set_false_path: list of objects specified for '-to' option contains no valid endpoints. Please check to make sure at least one valid endpoint is specified. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:19]
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/GND' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/VCC' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/bit_cnt0_i' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/bit_cnt_i' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/rnd_data_i' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/rnd_data_i__0' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/rnd_valid_i' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/rnd_valid_i__0' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/ro_chain_0_i' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/ro_chain_2_i' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/ro_chain_4_i' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/sample_cnt0_i' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/sample_trigger_i' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+WARNING: [Constraints 18-401] set_false_path: 'u_trng_8bit/shift_reg0_i' is not a valid endpoint. [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc:25]
+Resolution: A valid end point is a data pin of a sequential cell or a primary output or inout port. Please validate that all the objects returned by your query belong to this list.
+Finished Parsing XDC File [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc]
+Parsing XDC File [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/debug.xdc]
+Finished Parsing XDC File [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/debug.xdc]
+INFO: [Project 1-236] Implementation specific constraints were found while reading constraint file [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/debug.xdc]. These constraints will be ignored for synthesis but will be used in implementation. Impacted constraints are listed in the file [.Xil/top_propImpl.xdc].
+Resolution: To avoid this warning, move constraints listed in [.Xil/top_propImpl.xdc] to another XDC file and exclude this new file from synthesis with the used_in_synthesis property (File Properties dialog in GUI) and re-run elaboration/synthesis.
+Parsing XDC File [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/pin.xdc]
+Finished Parsing XDC File [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/pin.xdc]
+INFO: [Project 1-236] Implementation specific constraints were found while reading constraint file [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/pin.xdc]. These constraints will be ignored for synthesis but will be used in implementation. Impacted constraints are listed in the file [.Xil/top_propImpl.xdc].
+Resolution: To avoid this warning, move constraints listed in [.Xil/top_propImpl.xdc] to another XDC file and exclude this new file from synthesis with the used_in_synthesis property (File Properties dialog in GUI) and re-run elaboration/synthesis.
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 874.742 ; gain = 0.000
+Completed Processing XDC Constraints
+
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 874.742 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.001 . Memory (MB): peak = 874.742 ; gain = 0.000
+Constraint Validation Runtime : Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.004 . Memory (MB): peak = 874.742 ; gain = 0.000
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:05 ; elapsed = 00:00:06 . Memory (MB): peak = 874.742 ; gain = 506.621
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xc7a35tfgg484-1
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:05 ; elapsed = 00:00:06 . Memory (MB): peak = 874.742 ; gain = 506.621
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+Applied set_property IO_BUFFER_TYPE = NONE for clkn. (constraint file  e:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0/clk_wiz_0_in_context.xdc, line 4).
+Applied set_property CLOCK_BUFFER_TYPE = NONE for clkn. (constraint file  e:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0/clk_wiz_0_in_context.xdc, line 5).
+Applied set_property IO_BUFFER_TYPE = NONE for clkp. (constraint file  e:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0/clk_wiz_0_in_context.xdc, line 6).
+Applied set_property CLOCK_BUFFER_TYPE = NONE for clkp. (constraint file  e:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0/clk_wiz_0_in_context.xdc, line 7).
+Applied set_property DONT_TOUCH = true for u_clk_wiz_0. (constraint file  auto generated constraint, line ).
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:05 ; elapsed = 00:00:06 . Memory (MB): peak = 874.742 ; gain = 506.621
+---------------------------------------------------------------------------------
+INFO: [Synth 8-4471] merging register 'spi_data_valid_d1_reg' into 'rx_valid_d1_reg' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:127]
+INFO: [Synth 8-4471] merging register 't_lbh2lbl_w_reg[15:0]' into 't_ubh2ubl_w_reg[15:0]' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:369]
+INFO: [Synth 8-4471] merging register 't_lbl2lbh_w_reg[15:0]' into 't_ubl2ubh_w_reg[15:0]' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:369]
+INFO: [Synth 8-4471] merging register 't_avqv_r_reg[15:0]' into 't_avqv_w_reg[15:0]' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:372]
+INFO: [Synth 8-4471] merging register 't_av2dv_r_reg[15:0]' into 't_av2dv_w_reg[15:0]' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:373]
+INFO: [Synth 8-4471] merging register 't_wh2wl_r_reg[15:0]' into 't_av2dv_w_reg[15:0]' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:375]
+INFO: [Synth 8-4471] merging register 't_gl2gh_r_reg[15:0]' into 't_el2eh_r_reg[15:0]' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:376]
+INFO: [Synth 8-4471] merging register 't_lbh2lbl_r_reg[15:0]' into 't_ubh2ubl_r_reg[15:0]' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:378]
+INFO: [Synth 8-4471] merging register 't_lbl2lbh_r_reg[15:0]' into 't_ubl2ubh_r_reg[15:0]' [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v:378]
+INFO: [Synth 8-5544] ROM "tx_buf" won't be mapped to Block RAM because address size (4) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "tx_buf" won't be mapped to Block RAM because address size (4) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "tx_buf" won't be mapped to Block RAM because address size (4) smaller than threshold (5)
+INFO: [Synth 8-5546] ROM "stop_cmd_match" won't be mapped to RAM because it is too sparse
+INFO: [Synth 8-5546] ROM "rx_state" won't be mapped to RAM because it is too sparse
+INFO: [Synth 8-5546] ROM "start_test" won't be mapped to RAM because it is too sparse
+INFO: [Synth 8-5544] ROM "tx_byte_cnt" won't be mapped to Block RAM because address size (4) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "rnd_data" won't be mapped to Block RAM because address size (3) smaller than threshold (5)
+INFO: [Synth 8-5546] ROM "dout" won't be mapped to RAM because it is too sparse
+INFO: [Synth 8-5546] ROM "dout" won't be mapped to RAM because it is too sparse
+INFO: [Synth 8-5544] ROM "DQ_orig2" won't be mapped to Block RAM because address size (1) smaller than threshold (5)
+CRITICAL WARNING: [Synth 8-5971] Combinational loop found in the design within module (logic__134) during invertor optimization at instance (i_4) [E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/trng_ro.v:22]
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:06 ; elapsed = 00:00:06 . Memory (MB): peak = 874.742 ; gain = 506.621
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input     32 Bit       Adders := 6     
+	   2 Input     24 Bit       Adders := 1     
+	   2 Input     23 Bit       Adders := 1     
+	   2 Input     22 Bit       Adders := 3     
+	   2 Input     21 Bit       Adders := 1     
+	   3 Input     21 Bit       Adders := 6     
+	   2 Input     16 Bit       Adders := 2     
+	   2 Input      8 Bit       Adders := 2     
+	   2 Input      5 Bit       Adders := 2     
+	   2 Input      4 Bit       Adders := 1     
+	   2 Input      3 Bit       Adders := 2     
+	   2 Input      1 Bit       Adders := 1     
++---XORs : 
+	   2 Input      8 Bit         XORs := 1     
+	   2 Input      1 Bit         XORs := 1     
++---Registers : 
+	               32 Bit    Registers := 8     
+	               24 Bit    Registers := 1     
+	               23 Bit    Registers := 2     
+	               22 Bit    Registers := 3     
+	               21 Bit    Registers := 1     
+	               16 Bit    Registers := 22    
+	                8 Bit    Registers := 32    
+	                5 Bit    Registers := 3     
+	                4 Bit    Registers := 5     
+	                3 Bit    Registers := 2     
+	                2 Bit    Registers := 5     
+	                1 Bit    Registers := 45    
++---Muxes : 
+	   2 Input     32 Bit        Muxes := 4     
+	  20 Input     32 Bit        Muxes := 2     
+	   2 Input     23 Bit        Muxes := 2     
+	  20 Input     22 Bit        Muxes := 1     
+	   2 Input     22 Bit        Muxes := 4     
+	   6 Input     21 Bit        Muxes := 1     
+	   4 Input     16 Bit        Muxes := 1     
+	   2 Input     16 Bit        Muxes := 21    
+	  10 Input     16 Bit        Muxes := 1     
+	   3 Input     16 Bit        Muxes := 1     
+	   5 Input     16 Bit        Muxes := 1     
+	   2 Input      8 Bit        Muxes := 15    
+	   5 Input      8 Bit        Muxes := 1     
+	  20 Input      8 Bit        Muxes := 1     
+	   2 Input      7 Bit        Muxes := 1     
+	   2 Input      5 Bit        Muxes := 5     
+	   5 Input      5 Bit        Muxes := 1     
+	   2 Input      4 Bit        Muxes := 2     
+	   2 Input      3 Bit        Muxes := 4     
+	   4 Input      2 Bit        Muxes := 4     
+	   5 Input      2 Bit        Muxes := 1     
+	   2 Input      2 Bit        Muxes := 2     
+	   2 Input      1 Bit        Muxes := 67    
+	   5 Input      1 Bit        Muxes := 7     
+	  19 Input      1 Bit        Muxes := 6     
+	   3 Input      1 Bit        Muxes := 1     
+	   4 Input      1 Bit        Muxes := 2     
+	   6 Input      1 Bit        Muxes := 1     
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start RTL Hierarchical Component Statistics 
+---------------------------------------------------------------------------------
+Hierarchical RTL Component report 
+Module top 
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input     32 Bit       Adders := 4     
+	   2 Input     24 Bit       Adders := 1     
+	   2 Input     23 Bit       Adders := 1     
+	   2 Input     22 Bit       Adders := 3     
+	   2 Input     21 Bit       Adders := 1     
+	   3 Input     21 Bit       Adders := 6     
+	   2 Input     16 Bit       Adders := 1     
+	   2 Input      1 Bit       Adders := 1     
++---XORs : 
+	   2 Input      8 Bit         XORs := 1     
++---Registers : 
+	               32 Bit    Registers := 3     
+	               23 Bit    Registers := 1     
+	               22 Bit    Registers := 2     
+	               21 Bit    Registers := 1     
+	               16 Bit    Registers := 3     
+	                8 Bit    Registers := 1     
+	                4 Bit    Registers := 2     
+	                1 Bit    Registers := 21    
++---Muxes : 
+	   2 Input     32 Bit        Muxes := 3     
+	   2 Input     23 Bit        Muxes := 2     
+	   2 Input     22 Bit        Muxes := 4     
+	   6 Input     21 Bit        Muxes := 1     
+	   2 Input     16 Bit        Muxes := 15    
+	  10 Input     16 Bit        Muxes := 1     
+	   3 Input     16 Bit        Muxes := 1     
+	   5 Input     16 Bit        Muxes := 1     
+	   2 Input      1 Bit        Muxes := 40    
+	   4 Input      1 Bit        Muxes := 2     
+	   6 Input      1 Bit        Muxes := 1     
+	   5 Input      1 Bit        Muxes := 1     
+Module SPI_Slave 
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input      4 Bit       Adders := 1     
++---Registers : 
+	                8 Bit    Registers := 2     
+	                4 Bit    Registers := 1     
+	                1 Bit    Registers := 4     
++---Muxes : 
+	   2 Input      8 Bit        Muxes := 1     
+	   2 Input      4 Bit        Muxes := 2     
+	   2 Input      1 Bit        Muxes := 2     
+Module spi_protocol 
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input     32 Bit       Adders := 2     
+	   2 Input     16 Bit       Adders := 1     
+	   2 Input      8 Bit       Adders := 1     
+	   2 Input      5 Bit       Adders := 2     
+	   2 Input      3 Bit       Adders := 1     
++---Registers : 
+	               32 Bit    Registers := 5     
+	               24 Bit    Registers := 1     
+	               23 Bit    Registers := 1     
+	               22 Bit    Registers := 1     
+	               16 Bit    Registers := 19    
+	                8 Bit    Registers := 26    
+	                5 Bit    Registers := 3     
+	                4 Bit    Registers := 2     
+	                3 Bit    Registers := 1     
+	                2 Bit    Registers := 4     
+	                1 Bit    Registers := 18    
++---Muxes : 
+	   2 Input     32 Bit        Muxes := 1     
+	  20 Input     32 Bit        Muxes := 2     
+	  20 Input     22 Bit        Muxes := 1     
+	   4 Input     16 Bit        Muxes := 1     
+	   2 Input     16 Bit        Muxes := 6     
+	   2 Input      8 Bit        Muxes := 14    
+	   5 Input      8 Bit        Muxes := 1     
+	  20 Input      8 Bit        Muxes := 1     
+	   2 Input      7 Bit        Muxes := 1     
+	   2 Input      5 Bit        Muxes := 5     
+	   5 Input      5 Bit        Muxes := 1     
+	   2 Input      3 Bit        Muxes := 3     
+	   4 Input      2 Bit        Muxes := 4     
+	   5 Input      2 Bit        Muxes := 1     
+	   2 Input      2 Bit        Muxes := 2     
+	   2 Input      1 Bit        Muxes := 24    
+	   5 Input      1 Bit        Muxes := 6     
+	  19 Input      1 Bit        Muxes := 6     
+	   3 Input      1 Bit        Muxes := 1     
+Module trng_8bit 
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input      8 Bit       Adders := 1     
+	   2 Input      3 Bit       Adders := 1     
++---XORs : 
+	   2 Input      1 Bit         XORs := 1     
++---Registers : 
+	                8 Bit    Registers := 3     
+	                3 Bit    Registers := 1     
+	                2 Bit    Registers := 1     
+	                1 Bit    Registers := 2     
++---Muxes : 
+	   2 Input      3 Bit        Muxes := 1     
+	   2 Input      1 Bit        Muxes := 1     
+---------------------------------------------------------------------------------
+Finished RTL Hierarchical Component Statistics
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 90 (col length:60)
+BRAMs: 100 (col length: RAMB18 60 RAMB36 30)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+Warning: Parallel synthesis criteria is not met 
+INFO: [Synth 8-5544] ROM "tx_buf" won't be mapped to Block RAM because address size (4) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "tx_buf" won't be mapped to Block RAM because address size (4) smaller than threshold (5)
+INFO: [Synth 8-5546] ROM "rx_state" won't be mapped to RAM because it is too sparse
+INFO: [Synth 8-5546] ROM "stop_cmd_match" won't be mapped to RAM because it is too sparse
+INFO: [Synth 8-5544] ROM "rnd_data" won't be mapped to Block RAM because address size (3) smaller than threshold (5)
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port test_busy
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port test_done
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[21]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[20]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[19]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[18]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[17]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[16]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[15]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[14]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[13]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[12]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[11]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[10]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[9]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[8]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[7]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[6]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[5]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[4]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[3]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[2]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[1]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_addr[0]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[15]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[14]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[13]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[12]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[11]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[10]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[9]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[8]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[7]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[6]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[5]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[4]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[3]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[2]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[1]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port error_data[0]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[15]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[14]
+WARNING: [Synth 8-3331] design spi_protocol has unconnected port expected_data[13]
+INFO: [Common 17-14] Message 'Synth 8-3331' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_138' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_136' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_134' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_132' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_130' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_128' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_126' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_124' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_122' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_120' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_118' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_116' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_114' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_112' (FDPE) to 'R_DQ_reg__0i_110'
+INFO: [Synth 8-3886] merging instance 'R_DQ_reg__0i_110' (FDPE) to 'R_DQ_reg__0i_108'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[16][0]' (FDE) to 'u_spi_protocol/tx_buf_reg[11][1]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[10][0]' (FDE) to 'u_spi_protocol/tx_buf_reg[9][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[1][0]' (FDE) to 'u_spi_protocol/tx_buf_reg[1][4]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[0][0]' (FDE) to 'u_spi_protocol/tx_buf_reg[1][4]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[16][1]' (FDE) to 'u_spi_protocol/tx_buf_reg[16][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[11][1]' (FDE) to 'u_spi_protocol/tx_buf_reg[11][2]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[10][1]' (FDE) to 'u_spi_protocol/tx_buf_reg[10][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[1][1]' (FDE) to 'u_spi_protocol/tx_buf_reg[1][2]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[0][1]' (FDE) to 'u_spi_protocol/tx_buf_reg[9][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[16][2]' (FDE) to 'u_spi_protocol/tx_buf_reg[11][2]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[11][2]' (FDE) to 'u_spi_protocol/tx_buf_reg[11][3]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[10][2]' (FDE) to 'u_spi_protocol/tx_buf_reg[9][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[1][2]' (FDE) to 'u_spi_protocol/tx_buf_reg[1][3]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[0][2]' (FDE) to 'u_spi_protocol/tx_buf_reg[1][4]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[16][3]' (FDE) to 'u_spi_protocol/tx_buf_reg[16][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[11][3]' (FDE) to 'u_spi_protocol/tx_buf_reg[11][4]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[10][3]' (FDE) to 'u_spi_protocol/tx_buf_reg[10][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[1][3]' (FDE) to 'u_spi_protocol/tx_buf_reg[1][5]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[0][3]' (FDE) to 'u_spi_protocol/tx_buf_reg[9][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[16][4]' (FDE) to 'u_spi_protocol/tx_buf_reg[11][4]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[11][4]' (FDE) to 'u_spi_protocol/tx_buf_reg[11][5]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[10][4]' (FDE) to 'u_spi_protocol/tx_buf_reg[9][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[1][4]' (FDE) to 'u_spi_protocol/tx_buf_reg[0][6]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[0][4]' (FDE) to 'u_spi_protocol/tx_buf_reg[0][6]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[16][5]' (FDE) to 'u_spi_protocol/tx_buf_reg[16][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[11][5]' (FDE) to 'u_spi_protocol/tx_buf_reg[11][6]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[10][5]' (FDE) to 'u_spi_protocol/tx_buf_reg[10][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[1][5]' (FDE) to 'u_spi_protocol/tx_buf_reg[1][6]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[0][5]' (FDE) to 'u_spi_protocol/tx_buf_reg[9][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[16][6]' (FDE) to 'u_spi_protocol/tx_buf_reg[11][6]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[11][6]' (FDE) to 'u_spi_protocol/tx_buf_reg[11][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[10][6]' (FDE) to 'u_spi_protocol/tx_buf_reg[9][7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[1][6]' (FDE) to 'u_spi_protocol/tx_buf_reg[1][7]'
+INFO: [Synth 8-3333] propagating constant 1 across sequential element (u_spi_protocol/\tx_buf_reg[0][6] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\t_avav_reg_reg[8] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\t_avav_reg_reg[9] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\t_avav_reg_reg[10] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\t_avav_reg_reg[11] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\t_avav_reg_reg[12] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\t_avav_reg_reg[13] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\t_avav_reg_reg[14] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\t_avav_reg_reg[15] )
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/addr_ini_reg_reg[20]' (FDCE) to 'u_spi_protocol/addr_ini_reg_reg[21]'
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\addr_ini_reg_reg[21] )
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_byte_cnt_reg[1]' (FDCE) to 'u_spi_protocol/tx_byte_cnt_reg[3]'
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\tx_byte_cnt_reg[2] )
+INFO: [Synth 8-3333] propagating constant 1 across sequential element (u_spi_protocol/\tx_buf_reg[16][7] )
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\tx_buf_reg[11][7] )
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/tx_buf_reg[9][7]' (FDE) to 'u_spi_protocol/tx_buf_reg[0][7]'
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (u_spi_protocol/\tx_buf_reg[0][7] )
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[1]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[2]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[2]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[3]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[3]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[4]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[4]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[5]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[5]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[6]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[6]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[7]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[8]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[8]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[9]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[9]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[10]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[10]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[11]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[11]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[12]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[12]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[13]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[13]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[14]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[14]' (FDCE) to 'u_spi_protocol/t_ubh2ubl_r_reg[15]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_ubh2ubl_r_reg[15]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[0]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[0]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[2]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[2]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[3]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[3]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[4]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[4]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[5]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[5]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[6]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[6]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[7]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[8]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[8]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[9]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[9]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[10]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[10]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[11]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[11]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[12]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[12]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[13]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[13]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[14]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[14]' (FDCE) to 'u_spi_protocol/t_gh2gl_r_reg[15]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_gh2gl_r_reg[15]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[1]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[1]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[2]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[2]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[3]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[3]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[4]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[4]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[5]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[5]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[6]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[6]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[7]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[7]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[8]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[8]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[9]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[9]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[10]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[10]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[11]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[11]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[12]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[12]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[13]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[13]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[14]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[14]' (FDCE) to 'u_spi_protocol/t_eh2el_r_reg[15]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_eh2el_r_reg[15]' (FDCE) to 'u_spi_protocol/t_avav_r_reg[8]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_avav_r_reg[2]' (FDCE) to 'u_spi_protocol/t_gh2gl_w_reg[2]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_avav_r_reg[4]' (FDCE) to 'u_spi_protocol/t_gh2gl_w_reg[4]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_avav_r_reg[5]' (FDCE) to 'u_spi_protocol/t_gh2gl_w_reg[5]'
+INFO: [Synth 8-3886] merging instance 'u_spi_protocol/t_avav_r_reg[6]' (FDCE) to 'u_spi_protocol/t_gh2gl_w_reg[6]'
+INFO: [Common 17-14] Message 'Synth 8-3886' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+INFO: [Synth 8-3333] propagating constant 1 across sequential element (u_spi_protocol/\t_avqv_w_reg[3] )
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:08 ; elapsed = 00:00:08 . Memory (MB): peak = 874.742 ; gain = 506.621
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Applying XDC Timing Constraints
+---------------------------------------------------------------------------------
+INFO: [Synth 8-5578] Moved timing constraint from pin 'u_clk_wiz_0/clk_200m' to pin 'u_clk_wiz_0/bbstub_clk_200m/O'
+INFO: [Synth 8-5578] Moved timing constraint from pin 'u_clk_wiz_0/clk_400m' to pin 'u_clk_wiz_0/bbstub_clk_400m/O'
+INFO: [Synth 8-5819] Moved 2 constraints on hierarchical pins to their respective driving/loading pins
+---------------------------------------------------------------------------------
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:11 ; elapsed = 00:00:12 . Memory (MB): peak = 874.742 ; gain = 506.621
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+INFO: [Synth 8-620] skipping inversion-propagation across instance '\u_trng_8bit/ro_chain_4_inferred /i_0' with timing assertions on output pin 'O'
+INFO: [Synth 8-620] skipping inversion-propagation across instance '\u_trng_8bit/ro_chain_4_inferred /i_0' with timing assertions on output pin 'O'
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:12 ; elapsed = 00:00:13 . Memory (MB): peak = 933.402 ; gain = 565.281
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+INFO: [Synth 8-620] skipping inversion-propagation across instance '\u_trng_8bit/ro_chain_4 ' with timing assertions on output pin 'O'
+INFO: [Synth 8-620] skipping inversion-propagation across instance '\u_trng_8bit/ro_chain_4 ' with timing assertions on output pin 'O'
+INFO: [Synth 8-620] skipping inversion-propagation across instance '\u_trng_8bit/ro_chain_4 ' with timing assertions on output pin 'O'
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 933.402 ; gain = 565.281
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+WARNING: [Synth 8-3295] tying undriven pin send_stop_flag_inferred:in0 to constant 0
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 933.402 ; gain = 565.281
+---------------------------------------------------------------------------------
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 933.402 ; gain = 565.281
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 933.402 ; gain = 565.281
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 933.402 ; gain = 565.281
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 933.402 ; gain = 565.281
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 933.402 ; gain = 565.281
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++------+--------------+----------+
+|      |BlackBox name |Instances |
++------+--------------+----------+
+|1     |clk_wiz_0     |         1|
++------+--------------+----------+
+
+Report Cell Usage: 
++------+----------+------+
+|      |Cell      |Count |
++------+----------+------+
+|1     |clk_wiz_0 |     1|
+|2     |CARRY4    |   175|
+|3     |LUT1      |    65|
+|4     |LUT2      |   160|
+|5     |LUT3      |   230|
+|6     |LUT4      |   194|
+|7     |LUT5      |   244|
+|8     |LUT6      |   388|
+|9     |MUXF7     |    10|
+|10    |MUXF8     |     1|
+|11    |FDCE      |   701|
+|12    |FDPE      |    31|
+|13    |FDRE      |    89|
+|14    |FDSE      |     8|
+|15    |IBUF      |     4|
+|16    |IOBUF     |    16|
+|17    |OBUF      |    29|
+|18    |OBUFT     |     1|
++------+----------+------+
+
+Report Instance Areas: 
++------+-----------------+-------------+------+
+|      |Instance         |Module       |Cells |
++------+-----------------+-------------+------+
+|1     |top              |             |  2349|
+|2     |  u_spi_protocol |spi_protocol |   894|
+|3     |    u_spi_slave  |SPI_Slave    |    44|
+|4     |  u_trng_8bit    |trng_8bit    |    49|
++------+-----------------+-------------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 933.402 ; gain = 565.281
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 1 critical warnings and 58 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:09 ; elapsed = 00:00:10 . Memory (MB): peak = 933.402 ; gain = 218.230
+Synthesis Optimization Complete : Time (s): cpu = 00:00:13 ; elapsed = 00:00:14 . Memory (MB): peak = 933.402 ; gain = 565.281
+INFO: [Project 1-571] Translating synthesized netlist
+INFO: [Netlist 29-17] Analyzing 202 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.001 . Memory (MB): peak = 933.402 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 16 instances were transformed.
+  IOBUF => IOBUF (IBUF, OBUFT): 16 instances
+
+INFO: [Common 17-83] Releasing license: Synthesis
+207 Infos, 163 Warnings, 2 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:15 ; elapsed = 00:00:15 . Memory (MB): peak = 933.402 ; gain = 576.789
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 933.402 ; gain = 0.000
+WARNING: [Constraints 18-5210] No constraints selected for write.
+Resolution: This message can indicate that there are no constraints for the design, or it can indicate that the used_in flags are set such that the constraints are ignored. This later case is used when running synth_design to not write synthesis constraints to the resulting checkpoint. Instead, project constraints are read when the synthesized design is opened.
+INFO: [Common 17-1381] The checkpoint 'E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.runs/synth_2/top.dcp' has been generated.
+INFO: [runtcl-4] Executing : report_utilization -file top_utilization_synth.rpt -pb top_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Sat Jul  4 14:28:36 2026...

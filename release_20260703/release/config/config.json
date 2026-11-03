@@ -1,0 +1,66 @@
+{
+  "lastSelectedChipModel": "HS16M3A16AB",
+  "testConfigs": {
+    "HS256K3CD": {
+      "chipModel": "HS256K3CD",
+      "serialType": "i2c",
+      "testMode": "write",
+      "dataPattern": "increment",
+      "startAddressHex": "0x00000",
+      "dataLengthHex": "0x100",
+      "loopCount": 100,
+      "verboseLog": true,
+      "speed": "100KHz"
+    },
+    "HS256K3SA": {
+      "chipModel": "HS256K3SA",
+      "serialType": "spi",
+      "testMode": "write_read",
+      "dataPattern": "increment",
+      "startAddressHex": "0x00000",
+      "dataLengthHex": "0x8000",
+      "loopCount": 1,
+      "verboseLog": false,
+      "speed": "20MHz",
+      "spiMode": "mode0",
+      "spiDummy": 8
+    },
+    "HS4M3SC": {
+      "chipModel": "HS4M3SC",
+      "serialType": "spi",
+      "testMode": "write_read",
+      "dataPattern": "increment",
+      "startAddressHex": "0x00001",
+      "dataLengthHex": "0x1000",
+      "loopCount": 100,
+      "verboseLog": false,
+      "speed": "5MHz",
+      "spiMode": "mode0",
+      "spiDummy": 0
+    },
+    "HS4M3A16BT": {
+      "chipModel": "HS4M3A16BT",
+      "testMode": "write_read",
+      "dataPattern": "increment",
+      "startAddressHex": "0x00000",
+      "dataLengthHex": "0x40000",
+      "loopCount": 10,
+      "verboseLog": false,
+      "speedNs": 50,
+      "parallelWriteMode": "cen",
+      "parallelReadMode": "addr"
+    },
+    "HS16M3A16AB": {
+      "chipModel": "HS16M3A16AB",
+      "testMode": "write",
+      "dataPattern": "increment",
+      "startAddressHex": "0x00000",
+      "dataLengthHex": "0x100",
+      "loopCount": 1000,
+      "verboseLog": false,
+      "speedNs": 40,
+      "parallelWriteMode": "cen",
+      "parallelReadMode": "addr"
+    }
+  }
+}

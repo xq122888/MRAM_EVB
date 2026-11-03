@@ -1,0 +1,136 @@
+/*
+
+Xilinx Vivado v2018.3 (64-bit) [Major: 2018, Minor: 3]
+SW Build: 2405991 on Thu Dec  6 23:38:27 MST 2018
+IP Build: 2404404 on Fri Dec  7 01:43:56 MST 2018
+
+Process ID (PID): 6460
+License: Customer
+
+Current time: 	Sat Jul 04 11:49:00 CST 2026
+Time zone: 	China Standard Time (Asia/Shanghai)
+
+OS: Windows 10
+OS Version: 10.0
+OS Architecture: amd64
+Available processors (cores): 20
+
+Screen size: 1920x1080
+Screen resolution (DPI): 96
+Available screens: 1
+Available disk space: 97 GB
+Default font: family=Dialog,name=Dialog,style=plain,size=12
+
+Java version: 	9.0.4 64-bit
+Java home: 	D:/Xilinx/Vivado/2018.3/tps/win64/jre9.0.4
+Java executable location: 	D:/Xilinx/Vivado/2018.3/tps/win64/jre9.0.4/bin/java.exe
+Java initial memory (-Xms): 	128 MB
+Java maximum memory (-Xmx):	 3 GB
+
+
+User name: 	user
+User home directory: C:/Users/user
+User working directory: E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0703_6_x16/MR4A16B_TEST_1
+User country: 	CN
+User language: 	zh
+User locale: 	zh_CN
+
+RDI_BASEROOT: D:/Xilinx/Vivado
+HDI_APPROOT: D:/Xilinx/Vivado/2018.3
+RDI_DATADIR: D:/Xilinx/Vivado/2018.3/data
+RDI_BINDIR: D:/Xilinx/Vivado/2018.3/bin
+
+Vivado preferences file location: C:/Users/user/AppData/Roaming/Xilinx/Vivado/2018.3/vivado.xml
+Vivado preferences directory: C:/Users/user/AppData/Roaming/Xilinx/Vivado/2018.3/
+Vivado layouts directory: C:/Users/user/AppData/Roaming/Xilinx/Vivado/2018.3/layouts
+PlanAhead jar file location: 	D:/Xilinx/Vivado/2018.3/lib/classes/planAhead.jar
+Vivado log file location: 	E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0703_6_x16/MR4A16B_TEST_1/vivado.log
+Vivado journal file location: 	E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0703_6_x16/MR4A16B_TEST_1/vivado.jou
+Engine tmp dir: 	E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0703_6_x16/MR4A16B_TEST_1/.Xil/Vivado-6460-DESKTOP-5H9PV2I
+
+Xilinx Environment Variables
+----------------------------
+VSSDK140Install: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VSSDK\
+XILINX: D:/Xilinx/Vivado/2018.3/ids_lite/ISE
+XILINX_DSP: D:/Xilinx/Vivado/2018.3/ids_lite/ISE
+XILINX_PLANAHEAD: D:/Xilinx/Vivado/2018.3
+XILINX_SDK: D:/Xilinx/SDK/2018.3
+XILINX_VIVADO: D:/Xilinx/Vivado/2018.3
+XILINX_VIVADO_HLS: D:/Xilinx/Vivado/2018.3
+
+
+GUI allocated memory:	208 MB
+GUI max memory:		3,072 MB
+Engine allocated memory: 836 MB
+
+Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
+
+*/
+
+// TclEventType: START_GUI
+// TclEventType: PROJECT_OPEN_DIALOG
+// Tcl Message: start_gui 
+// TclEventType: PROJECT_OPEN_DIALOG
+// [GUI Memory]: 62 MB (+62803kb) [00:00:02]
+// [Engine Memory]: 619 MB (+497940kb) [00:00:02]
+// bx (cp):  Open Project : addNotify
+// Opening Vivado Project: E:\06_MramTestBoard\MRAM_Parallel_Test_35t\MR4A16B_TEST_0703_6_x16\MR4A16B_TEST_1\MR4A16B_TEST_1.xpr. Version: Vivado v2018.3 
+// TclEventType: DEBUG_PROBE_SET_CHANGE
+// Tcl Message: open_project E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0703_6_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.xpr 
+// Tcl Message: INFO: [ProjectBase 1-489] The host OS only allows 260 characters in a normal path. The project is stored in a path with more than 80 characters. If you experience issues with IP, Block Designs, or files not being found, please consider moving the project to a location with a shorter path. Alternately consider using the OS subst command to map part of the path to a drive letter. Current project path is 'E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0703_6_x16/MR4A16B_TEST_1' 
+// TclEventType: MSGMGR_MOVEMSG
+// TclEventType: FILESET_TARGET_UCF_CHANGE
+// TclEventType: FILE_SET_NEW
+// TclEventType: RUN_COMPLETED
+// TclEventType: FILESET_TARGET_UCF_CHANGE
+// TclEventType: RUN_COMPLETED
+// TclEventType: FILESET_TARGET_UCF_CHANGE
+// TclEventType: RUN_CURRENT
+// TclEventType: PROJECT_DASHBOARD_NEW
+// TclEventType: PROJECT_DASHBOARD_GADGET_NEW
+// TclEventType: PROJECT_DASHBOARD_GADGET_CHANGE
+// TclEventType: PROJECT_DASHBOARD_GADGET_NEW
+// TclEventType: FILE_SET_CHANGE
+// TclEventType: PROJECT_NEW
+// [GUI Memory]: 95 MB (+31551kb) [00:00:04]
+// [Engine Memory]: 807 MB (+164631kb) [00:00:04]
+// [GUI Memory]: 104 MB (+3600kb) [00:00:05]
+// WARNING: HEventQueue.dispatchEvent() is taking  1119 ms.
+// Tcl Message: open_project E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0703_6_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.xpr 
+// Tcl Message: INFO: [ProjectBase 1-489] The host OS only allows 260 characters in a normal path. The project is stored in a path with more than 80 characters. If you experience issues with IP, Block Designs, or files not being found, please consider moving the project to a location with a shorter path. Alternately consider using the OS subst command to map part of the path to a drive letter. Current project path is 'E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0703_6_x16/MR4A16B_TEST_1' 
+// Tcl Message: Scanning sources... Finished scanning sources 
+// Tcl Message: INFO: [IP_Flow 19-234] Refreshing IP repositories INFO: [IP_Flow 19-1704] No user IP repositories specified INFO: [IP_Flow 19-2313] Loaded Vivado IP repository 'D:/Xilinx/Vivado/2018.3/data/ip'. 
+// Project name: MR4A16B_TEST_1; location: E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0703_6_x16/MR4A16B_TEST_1; part: xc7a35tfgg484-1
+// [GUI Memory]: 124 MB (+15313kb) [00:00:06]
+// [Engine Memory]: 1,024 MB (+184429kb) [00:00:06]
+dismissDialog("Open Project"); // bx (cp)
+// HMemoryUtils.trashcanNow. Engine heap size: 1,024 MB. GUI used memory: 52 MB. Current time: 7/4/26, 11:49:02 AM CST
+// Elapsed time: 21 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, top (top.v)]", 1, true); // B (D, cp) - Node
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, top (top.v)]", 1, true, false, false, false, false, true); // B (D, cp) - Double Click - Node
+// Elapsed time: 29 seconds
+selectCodeEditor("top.v", 594, 248); // cl (w, cp)
+// Elapsed time: 28 seconds
+setText(RDIResource.HCodeEditor_SEARCH_TEXT_COMBO_BOX, "loop_idx"); // l (aT, cp)
+selectCodeEditor("top.v", 175, 267); // cl (w, cp)
+selectCodeEditor("top.v", 175, 267, false, false, false, false, true); // cl (w, cp) - Double Click
+selectCodeEditor("top.v", 354, 266); // cl (w, cp)
+selectCodeEditor("top.v", 37, 282); // cl (w, cp)
+selectCodeEditor("top.v", 387, 298); // cl (w, cp)
+selectCodeEditor("top.v", 124, 271); // cl (w, cp)
+selectCodeEditor("top.v", 124, 271, false, false, false, false, true); // cl (w, cp) - Double Click
+selectCodeEditor("top.v", 122, 183); // cl (w, cp)
+selectCodeEditor("top.v", 122, 183, false, false, false, false, true); // cl (w, cp) - Double Click
+selectCodeEditor("top.v", 121, 214); // cl (w, cp)
+selectCodeEditor("top.v", 121, 214, false, false, false, false, true); // cl (w, cp) - Double Click
+selectCodeEditor("top.v", 104, 192); // cl (w, cp)
+selectCodeEditor("top.v", 104, 192, false, false, false, false, true); // cl (w, cp) - Double Click
+selectCodeEditor("top.v", 101, 222); // cl (w, cp)
+selectCodeEditor("top.v", 101, 224, false, false, false, false, true); // cl (w, cp) - Double Click
+selectCodeEditor("top.v", 123, 185); // cl (w, cp)
+selectCodeEditor("top.v", 123, 185, false, false, false, false, true); // cl (w, cp) - Double Click
+selectCodeEditor("top.v", 226, 180); // cl (w, cp)
+selectCodeEditor("top.v", 226, 180, false, false, false, false, true); // cl (w, cp) - Double Click
+// Elapsed time: 280 seconds
+selectCodeEditor("top.v", 123, 292); // cl (w, cp)
+selectCodeEditor("top.v", 123, 292, false, false, false, false, true); // cl (w, cp) - Double Click
