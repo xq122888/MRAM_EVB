@@ -186,6 +186,9 @@ reg          loop_finish_d1;
 // parameters. No variable subtraction or increment precedes the runtime test.
 wire [31:0] spi_last_loop_index;
 wire [20:0] spi_last_test_address;
+wire [20:0] spi_gn_release_w, spi_gn_release_r;
+wire [20:0] gn_release_limit = rd_en_d2 ? spi_gn_release_r : spi_gn_release_w;
+wire gn_release_match = (addr_hold_cnt == gn_release_limit);
 wire [15:0] spi_period_last_w, spi_period_last_r;
 wire [15:0] spi_period_before_last_w, spi_period_before_last_r;
 wire [15:0] period_last = rd_en_d2 ? spi_period_last_r : spi_period_last_w;
@@ -201,7 +204,20 @@ wire hold_before_one = (vio_t_AVAV >= 16'd1) &&
     (addr_hold_cnt == period_last);
 wire hold_before_two = (vio_t_AVAV >= 16'd2) &&
     (addr_hold_cnt == period_before_last);
-wire addr_is_last = (vio_addr_num != 21'd0) && (addr_cnt == spi_last_test_address);
+// Bound equality reduction to small LUT groups instead of a wide carry
+// reduction. Preserve the zero-length guard and the two upper counter bits.
+(* keep = "true" *) wire [7:0] addr_last_group;
+generate
+    genvar addr_group;
+    for (addr_group=0; addr_group<7; addr_group=addr_group+1) begin : addr_terminal_compare
+        assign addr_last_group[addr_group] =
+            (addr_cnt[addr_group*3 +: 3] == spi_last_test_address[addr_group*3 +: 3]);
+    end
+endgenerate
+assign addr_last_group[7] = (addr_cnt[22:21] == 2'b0);
+(* keep = "true" *) wire addr_last_low = &addr_last_group[3:0];
+(* keep = "true" *) wire addr_last_high = &addr_last_group[7:4];
+wire addr_is_last = (vio_addr_num != 21'd0) && addr_last_low && addr_last_high;
 // Zero loop_count retains the original unsigned loop_count - 1 behavior.
 wire loop_has_more = (loop_idx < spi_last_loop_index);
 
@@ -223,6 +239,8 @@ spi_protocol u_spi_protocol (
     .loop_count(spi_loop_count),
     .last_loop_index(spi_last_loop_index),
     .last_test_address(spi_last_test_address),
+    .gn_release_w(spi_gn_release_w),
+    .gn_release_r(spi_gn_release_r),
     .period_last_w(spi_period_last_w),
     .period_before_last_w(spi_period_before_last_w),
     .period_last_r(spi_period_last_r),
@@ -618,7 +636,7 @@ always @(posedge clk or negedge rstn) begin
         R_GN <= 1'b0;
     else if(vio_t_GH2GL!=0 && addr_hold_cnt==vio_t_GH2GL)
         R_GN <= 1'b0;
-    else if(addr_hold_cnt==vio_t_AVAV-vio_t_GL2GH)
+    else if(gn_release_match)
         R_GN <= 1'b1;
     else
         R_GN <= R_GN;

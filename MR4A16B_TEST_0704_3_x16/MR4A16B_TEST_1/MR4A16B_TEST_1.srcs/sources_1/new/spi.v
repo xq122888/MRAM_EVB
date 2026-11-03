@@ -30,6 +30,9 @@ module spi_protocol #(
     output reg [15:0] period_before_last_w,
     output reg [15:0] period_last_r,
     output reg [15:0] period_before_last_r,
+    // GN release uses the same delayed read/write bank for both operands.
+    output reg [20:0] gn_release_w,
+    output reg [20:0] gn_release_r,
     output reg [1:0]  write_mode,
     output reg [1:0]  read_mode,
     output reg [7:0]  err_detail_print,
@@ -358,6 +361,8 @@ end
 // decode from the high-fanout enables of the base and predecoded registers.
 // Temporary fields remain stable; the frame tail/start follows a full SPI byte
 // later, so all parameters are committed before start_test is asserted.
+// These are the same period/GL2GH values selected by the existing mode cases.
+wire [15:0] commit_write_period = (write_mode_reg == 2'b11) ? 16'd10 : t_avav_reg;
 reg config_commit;
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n)
@@ -381,6 +386,8 @@ always @(posedge clk or negedge rst_n) begin
         period_before_last_w <= 16'd8;
         period_last_r <= 16'd9;
         period_before_last_r <= 16'd8;
+        gn_release_w <= 21'd8;
+        gn_release_r <= 21'd0;
         write_mode   <= 2'd0;        
 		read_mode    <= 2'd0;
 		err_detail_print <= 8'd0;
@@ -413,6 +420,11 @@ always @(posedge clk or negedge rst_n) begin
         last_loop_index <= loop_cnt_reg - 32'd1;
         // top.v historically uses the low 21 bits of test_length.
         last_test_address <= addr_num_reg[20:0] - 21'd1;
+        // GL2GH is zero for configured writes. For reads it is either zero
+        // (mode 1) or the entire period (all other modes). Both operands use
+        // rd_en_d2 in top.v. Reset values above preserve the initial 10-2/10-10.
+        gn_release_w <= {5'b0,commit_write_period};
+        gn_release_r <= (read_mode_reg == 2'b01) ? {5'b0,t_avav_reg} : 21'd0;
         period_last_r <= t_avav_reg - 16'd1;
         period_before_last_r <= t_avav_reg - 16'd2;
         // Invalid write_mode uses the existing 10-cycle fallback below.

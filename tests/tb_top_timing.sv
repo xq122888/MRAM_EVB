@@ -25,6 +25,8 @@ module tb_top_timing;
   wire [20:0] decoded_last_address=length-21'd1;
   wire [15:0] decoded_period_last=period-16'd1;
   wire [15:0] decoded_period_before_last=period-16'd2;
+  wire [20:0] decoded_gn_write={5'b0,period}-{5'b0,dut.spi_t_gl2gh_w};
+  wire [20:0] decoded_gn_read={5'b0,period}-{5'b0,dut.spi_t_gl2gh_r};
   reg checking=0;
   integer cycles=0,advances=0,finished=0,n,m,t,trial;
   reg [31:0] seed;
@@ -50,6 +52,8 @@ module tb_top_timing;
     force dut.spi_period_last_r=decoded_period_last;
     force dut.spi_period_before_last_w=decoded_period_before_last;
     force dut.spi_period_before_last_r=decoded_period_before_last;
+    force dut.spi_gn_release_w=decoded_gn_write;
+    force dut.spi_gn_release_r=decoded_gn_read;
     force dut.vio_din_sel=3; force refdut.vio_din_sel=3;
   end
   always @(posedge clk) begin
@@ -137,6 +141,11 @@ module tb_top_predicates;
   wire [20:0] decoded_last_address=length-21'd1;
   wire [15:0] decoded_period_last=period-16'd1;
   wire [15:0] decoded_period_before_last=period-16'd2;
+  wire [20:0] decoded_gn_write={5'b0,period}-{5'b0,dut.spi_t_gl2gh_w};
+  wire [20:0] decoded_gn_read={5'b0,period}-{5'b0,dut.spi_t_gl2gh_r};
+  reg [1:0] read_select=0;
+  reg [15:0] unit_gl_w=2,unit_gl_r=10;
+  wire phase_d=read_select[0],phase_d2=read_select[1];
   integer n,k,cases=0;
   top dut(.clkp(1'b0),.clkn(1'b1),.rst_n(1'b0),.spi_cs_n(1'b1),
           .spi_sclk(1'b0),.spi_mosi(1'b0));
@@ -144,18 +153,23 @@ module tb_top_predicates;
     force dut.addr_hold_cnt=hold;force dut.vio_t_AVAV=period;
     force dut.addr_cnt=count;force dut.vio_addr_num=length;
     force dut.loop_idx=index;force dut.loop_count=loops;
+    force dut.rd_en_d=phase_d;force dut.rd_en_d2=phase_d2;
+    force dut.spi_t_gl2gh_w=unit_gl_w;force dut.spi_t_gl2gh_r=unit_gl_r;
     force dut.spi_last_loop_index=decoded_last_loop;
     force dut.spi_last_test_address=decoded_last_address;
     force dut.spi_period_last_w=decoded_period_last;
     force dut.spi_period_last_r=decoded_period_last;
     force dut.spi_period_before_last_w=decoded_period_before_last;
     force dut.spi_period_before_last_r=decoded_period_before_last;
+    force dut.spi_gn_release_w=decoded_gn_write;
+    force dut.spi_gn_release_r=decoded_gn_read;
   end
   task check;
     begin
       #1;cases=cases+1;
       if(dut.loop_idx_inc !== (index+32'd1) ||
          dut.addr_cnt_inc !== ((count+32'd1) & 32'h007fffff) ||
+         dut.gn_release_match !== (hold==(period-dut.vio_t_GL2GH)) ||
          dut.hold_before_one !== (hold+1==period) ||
          dut.hold_before_one !== (hold==period-1) ||
          dut.hold_before_two !== (hold+2==period) ||
@@ -178,12 +192,21 @@ module tb_top_predicates;
     // Exercise full-width counters and both sides of the loop boundary.
     for(n=0;n<20000;n=n+1) begin
       period=$random;hold=$random;length=$random;count=$random;
+      unit_gl_w=$random;unit_gl_r=$random;read_select=n%4;
       loops=$random;index=$random;check;
       index=loops-1;check;
       index=loops;check;
       index=loops+1;check;
     end
-    $display("PASS: %0d predicate comparisons against original widened arithmetic",cases);
+    for(n=0;n<=12;n=n+1) begin
+      period=n;
+      for(k=0;k<4;k=k+1) begin
+        read_select=k;#1;
+        hold=period-dut.vio_t_GL2GH;check;
+        hold=hold+1;check;
+      end
+    end
+    $display("PASS: %0d predicate comparisons against original arithmetic, including GN underflow/bank selection",cases);
     $finish;
   end
 endmodule

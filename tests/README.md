@@ -261,3 +261,35 @@ threshold connections, test-start, completion, and ACK-driven loop advancement.
 This test does not force configuration/threshold wires. It uses the documented
 ideal clock/TRNG fixtures and constant-zero read bus, so it validates digital
 protocol/control integration rather than physical MRAM behavior.
+
+### Remaining four paths after implementation optimization
+
+For ec9263e with Performance_Explore, routed timing improved to WNS -0.060 ns,
+TNS -0.108 ns and four failing setup endpoints, with WHS +0.005 ns. The focused
+loop-index paths now meet timing (worst reported +0.953 ns). Changing to
+Performance_ExplorePostRoutePhysOpt improved WNS to -0.044 ns but retained four
+failures (GN control plus three address-counter bits). The following Aggressive-
+Explore timing bundle has identical timing bodies, so it shows no further gain;
+it does not distinguish a no-change optimization from reloading the old design.
+
+The next source change targets those remaining comparisons:
+
+- The GN release offset is computed during configuration commit. Read and write
+  values preserve the same rd_en_d2 bank selection used for BOTH operands in
+  the original release expression. GH2GL assertion still uses rd_en_d, unchanged.
+  The original
+  expression `addr_hold_cnt == vio_t_AVAV - vio_t_GL2GH` evaluates the subtraction
+  at the 21-bit comparison width. The decoder preserves that exact underflow
+  behavior; replacing it with a 16- or 32-bit subtraction would not be equivalent.
+- Terminal-address equality is divided into kept three-bit comparisons and two
+  small reduction groups. This aims to avoid a wide equality carry reduction
+  on the shared counter update-enable path without changing its logic.
+
+The predicate regression now covers 342,248 cases, including randomized GL2GH
+inputs, all four delayed read-enable combinations, explicit 21-bit underflow matches, and adjacent
+nonmatches. Per-clock decoder assertions check both GN offsets against the
+committed base registers. Serial tests exercise all read/write mode values,
+including invalid-write fallback, zero/one timing boundaries, and checksum rejection.
+The full cycle comparison and end-to-end SPI/controller tests remain required.
+These are functional guarantees only; routed setup/hold and physical SPI timing
+must still be checked after rebuilding the implementation.

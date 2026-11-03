@@ -11,7 +11,7 @@ module tb_spi_reports;
   reg [31:0] config_loops=1;
   reg [22:0] config_length=256;
   reg [7:0] config_period=7;
-  reg [1:0] config_write_mode=1;
+  reg [1:0] config_write_mode=1,config_read_mode=1;
   reg bad_checksum=0;
   reg [3:0] expected_test_mode=0;
   always #2.5 clk=~clk;
@@ -35,7 +35,9 @@ module tb_spi_reports;
          dut.period_last_w !== (dut.t_avav_w-16'd1) ||
          dut.period_before_last_w !== (dut.t_avav_w-16'd2) ||
          dut.period_last_r !== (dut.t_avav_r-16'd1) ||
-         dut.period_before_last_r !== (dut.t_avav_r-16'd2))
+         dut.period_before_last_r !== (dut.t_avav_r-16'd2) ||
+         dut.gn_release_w !== ({5'b0,dut.t_avav_w}-{5'b0,dut.t_gl2gh_w}) ||
+         dut.gn_release_r !== ({5'b0,dut.t_avav_r}-{5'b0,dut.t_gl2gh_r}))
         $fatal(1,"Decoded configuration is not atomic with base parameters");
     end
   end
@@ -51,20 +53,22 @@ module tb_spi_reports;
   endtask
   task configure(input [3:0] mode);
     reg [7:0] sum, unused;
-    reg [255:0] previous_config;
+    reg [383:0] previous_config;
     integer n;
     begin
       expected_test_mode=mode;
       previous_config={dut.test_mode,dut.test_length,dut.loop_count,dut.t_avav_w,
         dut.t_avav_r,dut.last_loop_index,dut.last_test_address,dut.period_last_w,
-        dut.period_before_last_w,dut.period_last_r,dut.period_before_last_r};
+        dut.period_before_last_w,dut.period_last_r,dut.period_before_last_r,
+        dut.gn_release_w,dut.gn_release_r,
+        dut.write_mode,dut.read_mode};
       for(n=0;n<24;n=n+1) cfg[n]=0;
       cfg[0]=8'h55;cfg[1]=8'h83;cfg[2]=mode;cfg[3]=1;
       cfg[8]=config_length[7:0];cfg[9]=config_length[15:8];
       cfg[10]={1'b0,config_length[22:16]};
       cfg[12]=config_loops[7:0];cfg[13]=config_loops[15:8];
       cfg[14]=config_loops[23:16];cfg[15]=config_loops[31:24];
-      cfg[16]=config_period;cfg[17]={6'b0,config_write_mode};cfg[18]=1;
+      cfg[16]=config_period;cfg[17]={6'b0,config_write_mode};cfg[18]={6'b0,config_read_mode};
       sum=0;for(n=1;n<=21;n=n+1) sum=sum+cfg[n];
       cfg[22]=bad_checksum ? (sum^8'h01) : sum;cfg[23]=8'haa;
       cs_n=0;#100;
@@ -74,11 +78,14 @@ module tb_spi_reports;
       if(bad_checksum) begin
         if({dut.test_mode,dut.test_length,dut.loop_count,dut.t_avav_w,
             dut.t_avav_r,dut.last_loop_index,dut.last_test_address,dut.period_last_w,
-            dut.period_before_last_w,dut.period_last_r,dut.period_before_last_r}
+            dut.period_before_last_w,dut.period_last_r,dut.period_before_last_r,
+            dut.gn_release_w,dut.gn_release_r,
+            dut.write_mode,dut.read_mode}
            !==previous_config)
           $fatal(1,"Bad checksum changed the committed configuration");
       end else if(dut.test_mode!==mode || dut.test_length!==config_length ||
-                  dut.loop_count!==config_loops || dut.t_avav_r!=={8'b0,config_period} ||
+                  dut.loop_count!==config_loops || dut.write_mode!==config_write_mode ||
+                  dut.read_mode!==config_read_mode || dut.t_avav_r!=={8'b0,config_period} ||
                   dut.t_avav_w!==((config_write_mode==3)?16'd10:{8'b0,config_period}))
         $fatal(1,"Configuration RX failed mode=%d length=%d",dut.test_mode,dut.test_length);
     end
@@ -136,7 +143,7 @@ module tb_spi_reports;
     end
     configure(2);loop_no=32'h12345678;notify;poll(17,0);poll(0,0);
     for(i=0;i<8;i=i+1) begin
-      config_write_mode=i%4;
+      config_write_mode=i%4;config_read_mode=(i/2)%4;
       case(i)
         0:begin config_period=0;config_loops=0;config_length=0;end
         1:begin config_period=1;config_loops=1;config_length=1;end
