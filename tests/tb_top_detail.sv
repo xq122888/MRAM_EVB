@@ -17,9 +17,9 @@ module tb_top_detail;
   reg [15:0] captured_expected;
   integer captured_loop,captured_index;
   reg prior_stall=0;
-  reg [223:0] prior_state;
+  reg [265:0] prior_state;
   reg [21:0] reference_address=0;
-  wire [223:0] memory_state={dut.dout_ref_addr,dut.addr,dut.addr_d,dut.addr_cnt,dut.addr_hold_cnt,
+  wire [265:0] memory_state={dut.hold_release_count,dut.hold_sample_count,dut.dout_ref_addr,dut.addr,dut.addr_d,dut.addr_cnt,dut.addr_hold_cnt,
     dut.rd_en,dut.rd_en_d,dut.rd_en_d2,dut.R_EN,dut.R_WN,dut.R_GN,dut.R_UBN,
     dut.R_LBN,dut.R_DQ,dut.dout,dut.dout_d1,dut.dout_d2,dut.dout_ref,
     dut.keep,dut.flg,dut.trng_data_reg,dut.trng_valid_reg};
@@ -62,6 +62,8 @@ module tb_top_detail;
     end
     #1;
     if(active && rst_n) begin
+      if(dut.hold_release_count!==dut.addr_hold_cnt || dut.hold_sample_count!==dut.addr_hold_cnt)
+        $fatal(1,"Timer replicas diverged during detail/start/loop control");
       if(detected && (dut.error_addr_snapshot!==captured_address ||
          dut.error_data_snapshot!==injected_data || dut.error_expected_snapshot!==captured_expected))
         $fatal(1,"Compare-edge snapshot used wrong operands");

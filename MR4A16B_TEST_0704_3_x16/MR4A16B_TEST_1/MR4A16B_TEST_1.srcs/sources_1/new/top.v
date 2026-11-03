@@ -102,7 +102,9 @@ wire [31:0] spi_loop_count;
 wire [1:0]  spi_write_mode;
 wire [1:0]  spi_read_mode;
 wire [7:0]  spi_err_detail_print;
-wire detail_enabled = (spi_test_mode == 4'd2) && (spi_err_detail_print == 8'd1);
+wire detail_enabled;
+wire spi_period_has_one_w, spi_period_has_one_r;
+wire spi_period_has_two_w, spi_period_has_two_r;
 wire [15:0] spi_t_avav_w;
 wire [15:0] spi_t_avqv_w;
 wire [15:0] spi_t_av2dv_w;
@@ -159,7 +161,12 @@ reg [21:0]  addr;
 reg [21:0]  addr_d;                                 
 (*mark_debug="true"*)reg [22:0]  addr_cnt;
 reg [22:0]  addr_cnt_d;                                                        
-(*mark_debug="true"*)reg [20:0]  addr_hold_cnt;
+// Separate synchronous copies place timer loads near the control, pin-release,
+// and error/IO-assertion logic. Each copy executes the SAME update on the SAME
+// edge, including pause/reset/start; this is replication, not a pipeline.
+(* mark_debug="true", keep="true", dont_touch="true" *) reg [20:0] addr_hold_cnt;
+(* keep="true", dont_touch="true" *) reg [20:0] hold_release_count;
+(* keep="true", dont_touch="true" *) reg [20:0] hold_sample_count;
 (*mark_debug="true"*)reg [31:0]  err_cnt; 
 
 (*mark_debug="true"*)reg     keep ;
@@ -219,14 +226,14 @@ wire [15:0] spi_period_before_last_w, spi_period_before_last_r;
 // Bound the equality logic to LUT groups; prevent Vivado from selecting
 // a serial CARRY reduction on the high-fanout runtime control predicates.
 wire hold_one_w_equal, hold_one_r_equal, hold_two_w_equal, hold_two_r_equal;
-mram_equal_lut #(.WIDTH(21)) eq_hold_one_w(.a(addr_hold_cnt),.b({5'b0,spi_period_last_w}),.match(hold_one_w_equal));
-mram_equal_lut #(.WIDTH(21)) eq_hold_one_r(.a(addr_hold_cnt),.b({5'b0,spi_period_last_r}),.match(hold_one_r_equal));
-mram_equal_lut #(.WIDTH(21)) eq_hold_two_w(.a(addr_hold_cnt),.b({5'b0,spi_period_before_last_w}),.match(hold_two_w_equal));
-mram_equal_lut #(.WIDTH(21)) eq_hold_two_r(.a(addr_hold_cnt),.b({5'b0,spi_period_before_last_r}),.match(hold_two_r_equal));
-(* keep = "true" *) wire hold_one_w = (spi_t_avav_w >= 16'd1) && hold_one_w_equal;
-(* keep = "true" *) wire hold_one_r = (spi_t_avav_r >= 16'd1) && hold_one_r_equal;
-(* keep = "true" *) wire hold_two_w = (spi_t_avav_w >= 16'd2) && hold_two_w_equal;
-(* keep = "true" *) wire hold_two_r = (spi_t_avav_r >= 16'd2) && hold_two_r_equal;
+mram_equal_lut #(.WIDTH(22)) eq_hold_one_w(.a({1'b0,addr_hold_cnt}),.b({!spi_period_has_one_w,5'b0,spi_period_last_w}),.match(hold_one_w_equal));
+mram_equal_lut #(.WIDTH(22)) eq_hold_one_r(.a({1'b0,addr_hold_cnt}),.b({!spi_period_has_one_r,5'b0,spi_period_last_r}),.match(hold_one_r_equal));
+mram_equal_lut #(.WIDTH(22)) eq_hold_two_w(.a({1'b0,addr_hold_cnt}),.b({!spi_period_has_two_w,5'b0,spi_period_before_last_w}),.match(hold_two_w_equal));
+mram_equal_lut #(.WIDTH(22)) eq_hold_two_r(.a({1'b0,addr_hold_cnt}),.b({!spi_period_has_two_r,5'b0,spi_period_before_last_r}),.match(hold_two_r_equal));
+(* keep = "true" *) wire hold_one_w = hold_one_w_equal;
+(* keep = "true" *) wire hold_one_r = hold_one_r_equal;
+(* keep = "true" *) wire hold_two_w = hold_two_w_equal;
+(* keep = "true" *) wire hold_two_r = hold_two_r_equal;
 wire hold_before_one = rd_en_d2 ? hold_one_r : hold_one_w;
 wire hold_before_two = rd_en_d2 ? hold_two_r : hold_two_w;
 (* keep = "true" *) wire period_w_match;
@@ -235,37 +242,37 @@ mram_equal_lut eq_period_w(.a(addr_hold_cnt),.b({5'b0,spi_t_avav_w}),.match(peri
 mram_equal_lut eq_period_r(.a(addr_hold_cnt),.b({5'b0,spi_t_avav_r}),.match(period_r_match));
 wire period_match = rd_en_d2 ? period_r_match : period_w_match;
 (* keep = "true" *) wire early_w_match;
-mram_equal_lut eq_early_w(.a(addr_hold_cnt),.b(spi_compare_early_w),.match(early_w_match));
+mram_equal_lut eq_early_w(.a(hold_sample_count),.b(spi_compare_early_w),.match(early_w_match));
 (* keep = "true" *) wire early_r_match;
-mram_equal_lut eq_early_r(.a(addr_hold_cnt),.b(spi_compare_early_r),.match(early_r_match));
+mram_equal_lut eq_early_r(.a(hold_sample_count),.b(spi_compare_early_r),.match(early_r_match));
 wire early_match = rd_en_d2 ? early_r_match : early_w_match;
 (* keep = "true" *) wire gn_release_w_match;
-mram_equal_lut eq_gn_release_w(.a(addr_hold_cnt),.b(spi_gn_release_w),.match(gn_release_w_match));
+mram_equal_lut eq_gn_release_w(.a(hold_release_count),.b(spi_gn_release_w),.match(gn_release_w_match));
 (* keep = "true" *) wire gn_release_r_match;
-mram_equal_lut eq_gn_release_r(.a(addr_hold_cnt),.b(spi_gn_release_r),.match(gn_release_r_match));
+mram_equal_lut eq_gn_release_r(.a(hold_release_count),.b(spi_gn_release_r),.match(gn_release_r_match));
 wire gn_release_match = rd_en_d2 ? gn_release_r_match : gn_release_w_match;
 (* keep = "true" *) wire en_release_w_match;
-mram_equal_lut eq_en_release_w(.a(addr_hold_cnt),.b(spi_en_release_w),.match(en_release_w_match));
+mram_equal_lut eq_en_release_w(.a(hold_release_count),.b(spi_en_release_w),.match(en_release_w_match));
 (* keep = "true" *) wire en_release_r_match;
-mram_equal_lut eq_en_release_r(.a(addr_hold_cnt),.b(spi_en_release_r),.match(en_release_r_match));
+mram_equal_lut eq_en_release_r(.a(hold_release_count),.b(spi_en_release_r),.match(en_release_r_match));
 wire en_release_match = rd_en_d2 ? en_release_r_match : en_release_w_match;
 (* keep = "true" *) wire wn_release_w_match;
-mram_equal_lut eq_wn_release_w(.a(addr_hold_cnt),.b(spi_wn_release_w),.match(wn_release_w_match));
+mram_equal_lut eq_wn_release_w(.a(hold_release_count),.b(spi_wn_release_w),.match(wn_release_w_match));
 (* keep = "true" *) wire wn_release_r_match;
-mram_equal_lut eq_wn_release_r(.a(addr_hold_cnt),.b(spi_wn_release_r),.match(wn_release_r_match));
+mram_equal_lut eq_wn_release_r(.a(hold_release_count),.b(spi_wn_release_r),.match(wn_release_r_match));
 wire wn_release_match = rd_en_d2 ? wn_release_r_match : wn_release_w_match;
 (* keep = "true" *) wire ub_release_w_match;
-mram_equal_lut eq_ub_release_w(.a(addr_hold_cnt),.b(spi_ub_release_w),.match(ub_release_w_match));
+mram_equal_lut eq_ub_release_w(.a(hold_release_count),.b(spi_ub_release_w),.match(ub_release_w_match));
 (* keep = "true" *) wire ub_release_r_match;
-mram_equal_lut eq_ub_release_r(.a(addr_hold_cnt),.b(spi_ub_release_r),.match(ub_release_r_match));
+mram_equal_lut eq_ub_release_r(.a(hold_release_count),.b(spi_ub_release_r),.match(ub_release_r_match));
 wire ub_release_match = rd_en_d2 ? ub_release_r_match : ub_release_w_match;
 (* keep = "true" *) wire lb_release_w_match;
-mram_equal_lut eq_lb_release_w(.a(addr_hold_cnt),.b(spi_lb_release_w),.match(lb_release_w_match));
+mram_equal_lut eq_lb_release_w(.a(hold_release_count),.b(spi_lb_release_w),.match(lb_release_w_match));
 (* keep = "true" *) wire lb_release_r_match;
-mram_equal_lut eq_lb_release_r(.a(addr_hold_cnt),.b(spi_lb_release_r),.match(lb_release_r_match));
+mram_equal_lut eq_lb_release_r(.a(hold_release_count),.b(spi_lb_release_r),.match(lb_release_r_match));
 wire lb_release_match = rd_en_d2 ? lb_release_r_match : lb_release_w_match;
 wire late_match;
-mram_equal_lut eq_late(.a(addr_hold_cnt),.b({5'b0,spi_t_avqv_r}),.match(late_match));
+mram_equal_lut eq_late(.a(hold_sample_count),.b({5'b0,spi_t_avqv_r}),.match(late_match));
 wire current_is_initial, current_equals_address, addr_count_equal;
 mram_equal_lut #(.WIDTH(22)) eq_current_initial(.a(addr_d),.b({2'b0,vio_addr_ini}),.match(current_is_initial));
 mram_equal_lut #(.WIDTH(22)) eq_current_address(.a(addr_d),.b(addr),.match(current_equals_address));
@@ -343,6 +350,11 @@ spi_protocol u_spi_protocol (
     .write_mode(spi_write_mode),
     .read_mode(spi_read_mode),
     .err_detail_print(spi_err_detail_print),
+    .detail_enabled(detail_enabled),
+    .period_has_one_w(spi_period_has_one_w),
+    .period_has_one_r(spi_period_has_one_r),
+    .period_has_two_w(spi_period_has_two_w),
+    .period_has_two_r(spi_period_has_two_r),
     .t_avav_w(spi_t_avav_w),
     .t_avqv_w(spi_t_avqv_w),
     .t_av2dv_w(spi_t_av2dv_w),
@@ -562,9 +574,7 @@ always @(posedge clk or negedge rstn) begin
         addr <= addr;
     else if(start_d1!=0 && start_d1!=start_d2)
         addr <= vio_addr_ini;
-     else if(flg && keep)
-        addr <= vio_addr_ini + addr_cnt;
-    else if(flg && addr_count_less)
+    else if(flg && (keep || addr_count_less))
         addr <= vio_addr_ini + addr_cnt;
     else if(hold_before_one)
         addr <= 22'd0;
@@ -590,23 +600,62 @@ end
 
 
 //---
+// The two old load-one branches shared a period condition; combine their
+// events so stall/start/period control does not form a serial priority chain.
+wire hold_load_one = (next_loop_start_d2 && !next_loop_start_d3) ||
+                     (start_d2 && !start_d3) || (addr_count_less && period_match);
+(* keep="true" *) wire [20:0] addr_hold_cnt_inc = addr_hold_cnt + 21'd1;
 always @(posedge clk or negedge rstn) begin
-    if(!rstn)
+    if (!rstn)
         addr_hold_cnt <= 21'd0;
-    else if(detail_stall)
-        addr_hold_cnt <= addr_hold_cnt;
-    else if(next_loop_start_d1)
-        addr_hold_cnt <= 21'd0;
-    else if((next_loop_start_d2 != 0 && next_loop_start_d2 != next_loop_start_d3) || (addr_count_less && period_match)) //next_loop start
-        addr_hold_cnt <= 1;
-    else if((start_d2 != 0 && start_d2 != start_d3) || (addr_count_less && period_match))//µÚÒ»´Îstart
-        addr_hold_cnt <= 1;
-    else if(period_match)
-        addr_hold_cnt <= 21'd0;
-    else if(addr_hold_cnt)
-        addr_hold_cnt <= addr_hold_cnt + 1;
-    else
-        addr_hold_cnt <= 21'd0;
+    else if (!detail_stall) begin
+        if (next_loop_start_d1)
+            addr_hold_cnt <= 21'd0;
+        else if (hold_load_one)
+            addr_hold_cnt <= 21'd1;
+        else if (period_match)
+            addr_hold_cnt <= 21'd0;
+        else if (|addr_hold_cnt)
+            addr_hold_cnt <= addr_hold_cnt_inc;
+        else
+            addr_hold_cnt <= 21'd0;
+    end
+end
+
+(* keep="true" *) wire [20:0] hold_release_count_inc = hold_release_count + 21'd1;
+always @(posedge clk or negedge rstn) begin
+    if (!rstn)
+        hold_release_count <= 21'd0;
+    else if (!detail_stall) begin
+        if (next_loop_start_d1)
+            hold_release_count <= 21'd0;
+        else if (hold_load_one)
+            hold_release_count <= 21'd1;
+        else if (period_match)
+            hold_release_count <= 21'd0;
+        else if (|hold_release_count)
+            hold_release_count <= hold_release_count_inc;
+        else
+            hold_release_count <= 21'd0;
+    end
+end
+
+(* keep="true" *) wire [20:0] hold_sample_count_inc = hold_sample_count + 21'd1;
+always @(posedge clk or negedge rstn) begin
+    if (!rstn)
+        hold_sample_count <= 21'd0;
+    else if (!detail_stall) begin
+        if (next_loop_start_d1)
+            hold_sample_count <= 21'd0;
+        else if (hold_load_one)
+            hold_sample_count <= 21'd1;
+        else if (period_match)
+            hold_sample_count <= 21'd0;
+        else if (|hold_sample_count)
+            hold_sample_count <= hold_sample_count_inc;
+        else
+            hold_sample_count <= 21'd0;
+    end
 end
 
 //---
@@ -759,7 +808,7 @@ always @(posedge clk or negedge rstn) begin
         R_EN <= 1'b0;
     else if(vio_t_EH2EL==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
         R_EN <= 1'b0;
-    else if(vio_t_EH2EL!=0 && addr_hold_cnt==vio_t_EH2EL)
+    else if(vio_t_EH2EL!=0 && hold_sample_count==vio_t_EH2EL)
         R_EN <= 1'b0;
     else if(en_release_match)
         R_EN <= 1'b1;
@@ -777,7 +826,7 @@ always @(posedge clk or negedge rstn) begin
         R_WN <= 1'b0;
     else if(vio_t_WH2WL==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
         R_WN <= 1'b0;
-    else if(vio_t_WH2WL!=0 && addr_hold_cnt==vio_t_WH2WL)
+    else if(vio_t_WH2WL!=0 && hold_sample_count==vio_t_WH2WL)
         R_WN <= 1'b0;
     else if(wn_release_match)
         R_WN <= 1'b1;
@@ -795,7 +844,7 @@ always @(posedge clk or negedge rstn) begin
         R_GN <= 1'b0;
     else if(vio_t_GH2GL==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
         R_GN <= 1'b0;
-    else if(vio_t_GH2GL!=0 && addr_hold_cnt==vio_t_GH2GL)
+    else if(vio_t_GH2GL!=0 && hold_sample_count==vio_t_GH2GL)
         R_GN <= 1'b0;
     else if(gn_release_match)
         R_GN <= 1'b1;
@@ -813,7 +862,7 @@ always @(posedge clk or negedge rstn) begin
         R_UBN <= 1'b0;
     else if(vio_t_UBH2UBL==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
         R_UBN <= 1'b0;
-    else if(vio_t_UBH2UBL!=0 && addr_hold_cnt==vio_t_UBH2UBL)
+    else if(vio_t_UBH2UBL!=0 && hold_sample_count==vio_t_UBH2UBL)
         R_UBN <= 1'b0;
     else if(ub_release_match)
         R_UBN <= 1'b1;
@@ -831,7 +880,7 @@ always @(posedge clk or negedge rstn) begin
         R_LBN <= 1'b0;
     else if(vio_t_LBH2LBL==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
         R_LBN <= 1'b0;
-    else if(vio_t_LBH2LBL!=0 && addr_hold_cnt==vio_t_LBH2LBL)
+    else if(vio_t_LBH2LBL!=0 && hold_sample_count==vio_t_LBH2LBL)
         R_LBN <= 1'b0;
     else if(lb_release_match)
         R_LBN <= 1'b1;
@@ -851,7 +900,7 @@ always @(posedge clk or negedge rstn) begin
         R_DQ <= dout;
     else if(vio_t_AV2DV==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
         R_DQ <= dout;
-    else if(vio_t_AV2DV!=0 && addr_hold_cnt==vio_t_AV2DV)
+    else if(vio_t_AV2DV!=0 && hold_sample_count==vio_t_AV2DV)
         R_DQ <= dout;
     else if(period_match)
         R_DQ <= 16'h0;

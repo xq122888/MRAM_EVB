@@ -14,6 +14,7 @@ module tb_spi_reports;
   reg [1:0] config_write_mode=1,config_read_mode=1;
   reg bad_checksum=0;
   reg [7:0] config_chip=8'h83;
+  reg [7:0] config_detail=0;
   reg [3:0] expected_test_mode=0;
   always #2.5 clk=~clk;
   always @(posedge clk) if (ack) ack_count=ack_count+1;
@@ -31,6 +32,12 @@ module tb_spi_reports;
       if(dut.start_test && (bad_checksum || dut.test_mode!==expected_test_mode ||
          dut.loop_count!==config_loops || dut.test_length!==config_length))
         $fatal(1,"Test started before the new configuration was committed");
+      if(dut.detail_enabled !== ((dut.test_mode==4'd2) && (dut.err_detail_print==8'd1)) ||
+         dut.period_has_one_w !== (dut.t_avav_w>=16'd1) ||
+         dut.period_has_one_r !== (dut.t_avav_r>=16'd1) ||
+         dut.period_has_two_w !== (dut.t_avav_w>=16'd2) ||
+         dut.period_has_two_r !== (dut.t_avav_r>=16'd2))
+        $fatal(1,"Registered configuration predicates are not atomic");
       if(dut.last_loop_index !== (dut.loop_count-32'd1) ||
          dut.last_test_address !== (dut.test_length[20:0]-21'd1) ||
          dut.period_last_w !== (dut.t_avav_w-16'd1) ||
@@ -75,6 +82,8 @@ module tb_spi_reports;
         dut.compare_early_w,dut.compare_early_r,dut.en_release_w,dut.en_release_r,
         dut.wn_release_w,dut.wn_release_r,dut.ub_release_w,dut.ub_release_r,
         dut.lb_release_w,dut.lb_release_r,
+        dut.detail_enabled,dut.period_has_one_w,dut.period_has_one_r,
+        dut.period_has_two_w,dut.period_has_two_r,
         dut.write_mode,dut.read_mode};
       for(n=0;n<24;n=n+1) cfg[n]=0;
       cfg[0]=8'h55;cfg[1]=config_chip;cfg[2]=mode;cfg[3]=1;
@@ -83,6 +92,7 @@ module tb_spi_reports;
       cfg[12]=config_loops[7:0];cfg[13]=config_loops[15:8];
       cfg[14]=config_loops[23:16];cfg[15]=config_loops[31:24];
       cfg[16]=config_period;cfg[17]={6'b0,config_write_mode};cfg[18]={6'b0,config_read_mode};
+      cfg[19]=config_detail;
       sum=0;for(n=1;n<=21;n=n+1) sum=sum+cfg[n];
       cfg[22]=bad_checksum ? (sum^8'h01) : sum;cfg[23]=8'haa;
       cs_n=0;#100;
@@ -97,6 +107,8 @@ module tb_spi_reports;
             dut.compare_early_w,dut.compare_early_r,dut.en_release_w,dut.en_release_r,
             dut.wn_release_w,dut.wn_release_r,dut.ub_release_w,dut.ub_release_r,
             dut.lb_release_w,dut.lb_release_r,
+            dut.detail_enabled,dut.period_has_one_w,dut.period_has_one_r,
+            dut.period_has_two_w,dut.period_has_two_r,
             dut.write_mode,dut.read_mode}
            !==previous_config)
           $fatal(1,"Bad checksum changed the committed configuration");
@@ -177,6 +189,8 @@ module tb_spi_reports;
     configure(2);
     config_chip=8'h82;config_period=1;config_write_mode=2;config_read_mode=1;
     configure(2);
+    config_detail=1;configure(2);
+    config_detail=2;config_period=0;configure(2);
     bad_checksum=1;config_period=99;config_loops=9;config_length=123;
     configure(2);
     $display("PASS: %0d SPI polls; %0d configuration checks with atomic decoded thresholds and bad-checksum retention",frames,config_checks);

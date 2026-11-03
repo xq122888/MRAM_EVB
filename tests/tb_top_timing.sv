@@ -37,6 +37,10 @@ module tb_top_timing;
   wire [20:0] decoded_ub_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_ubl2ubh_r};
   wire [20:0] decoded_lb_release_w = {5'b0,dut.spi_t_avav_w} - {5'b0,dut.spi_t_lbl2lbh_w};
   wire [20:0] decoded_lb_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_lbl2lbh_r};
+  wire decoded_period_has_one_w = (dut.spi_t_avav_w >= 16'd1);
+  wire decoded_period_has_one_r = (dut.spi_t_avav_r >= 16'd1);
+  wire decoded_period_has_two_w = (dut.spi_t_avav_w >= 16'd2);
+  wire decoded_period_has_two_r = (dut.spi_t_avav_r >= 16'd2);
   reg checking=0;
   integer cycles=0,advances=0,finished=0,n,m,t,trial;
   reg [31:0] seed;
@@ -75,12 +79,18 @@ module tb_top_timing;
     force dut.spi_ub_release_r=decoded_ub_release_r;
     force dut.spi_lb_release_w=decoded_lb_release_w;
     force dut.spi_lb_release_r=decoded_lb_release_r;
+    force dut.spi_period_has_one_w=decoded_period_has_one_w;
+    force dut.spi_period_has_one_r=decoded_period_has_one_r;
+    force dut.spi_period_has_two_w=decoded_period_has_two_w;
+    force dut.spi_period_has_two_r=decoded_period_has_two_r;
     force dut.vio_din_sel=3; force refdut.vio_din_sel=3;
   end
   always @(posedge clk) begin
     #1;
     if(checking) begin
       cycles=cycles+1;
+      if(dut.hold_release_count!==dut.addr_hold_cnt || dut.hold_sample_count!==dut.addr_hold_cnt)
+        $fatal(1,"Timer replicas lost synchronous state");
       if ({dut.loop_idx,dut.loop_done,dut.loop_finish,dut.frame_ack_latched,
            dut.next_loop_start_d1,dut.next_loop_start_d2,dut.next_loop_start_d3,
            dut.addr_cnt,dut.addr_hold_cnt,dut.err_cnt,dut.dout,dut.rd_en,
@@ -180,6 +190,10 @@ module tb_top_predicates;
   wire [20:0] decoded_ub_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_ubl2ubh_r};
   wire [20:0] decoded_lb_release_w = {5'b0,dut.spi_t_avav_w} - {5'b0,dut.spi_t_lbl2lbh_w};
   wire [20:0] decoded_lb_release_r = {5'b0,dut.spi_t_avav_r} - {5'b0,dut.spi_t_lbl2lbh_r};
+  wire decoded_period_has_one_w = (dut.spi_t_avav_w >= 16'd1);
+  wire decoded_period_has_one_r = (dut.spi_t_avav_r >= 16'd1);
+  wire decoded_period_has_two_w = (dut.spi_t_avav_w >= 16'd2);
+  wire decoded_period_has_two_r = (dut.spi_t_avav_r >= 16'd2);
   reg [1:0] read_select=0;
   reg [15:0] unit_gl_w=2,unit_gl_r=10;
   reg [15:0] unit_avqv=9,unit_en_w=3,unit_en_r=10,unit_wn=2;
@@ -191,6 +205,7 @@ module tb_top_predicates;
           .spi_sclk(1'b0),.spi_mosi(1'b0));
   initial begin
     force dut.addr_hold_cnt=hold;force dut.vio_t_AVAV=unit_selected_period;
+    force dut.hold_release_count=hold;force dut.hold_sample_count=hold;
     force dut.addr_cnt=count;force dut.vio_addr_num=length;
     force dut.loop_idx=index;force dut.loop_count=loops;
     force dut.rd_en_d=phase_d;force dut.rd_en_d2=phase_d2;
@@ -219,6 +234,10 @@ module tb_top_predicates;
     force dut.spi_ub_release_r=decoded_ub_release_r;
     force dut.spi_lb_release_w=decoded_lb_release_w;
     force dut.spi_lb_release_r=decoded_lb_release_r;
+    force dut.spi_period_has_one_w=decoded_period_has_one_w;
+    force dut.spi_period_has_one_r=decoded_period_has_one_r;
+    force dut.spi_period_has_two_w=decoded_period_has_two_w;
+    force dut.spi_period_has_two_r=decoded_period_has_two_r;
   end
   task check;
     begin

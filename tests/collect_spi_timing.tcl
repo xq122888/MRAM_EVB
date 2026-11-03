@@ -26,6 +26,7 @@ proc mram_collect_spi_timing {repo_root} {
     puts $metadata "Decoded loop-limit registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *last_loop_index_reg*}]]"
     puts $metadata "Detailed error mailbox registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *detail_pending_reg*}]]"
     puts $metadata "Predecoded error compare registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *compare_early_*reg*}]]"
+    puts $metadata "Local period-counter replica registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *hold_release_count_reg* || NAME =~ *hold_sample_count_reg*}]]"
     puts $metadata "Note: checkout/run metadata does not prove the currently loaded checkpoint is fresh."
     close $metadata
     set summary_path [file join $report_dir summary.rpt]

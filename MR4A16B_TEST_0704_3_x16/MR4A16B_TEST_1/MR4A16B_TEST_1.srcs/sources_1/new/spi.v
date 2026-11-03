@@ -47,6 +47,10 @@ module spi_protocol #(
     output reg [1:0]  write_mode,
     output reg [1:0]  read_mode,
     output reg [7:0]  err_detail_print,
+    // Commit slow configuration predicates once, before test_start.
+    output reg detail_enabled,
+    output reg period_has_one_w, period_has_one_r,
+    output reg period_has_two_w, period_has_two_r,
     
     // 时序参数输出
     //写
@@ -425,6 +429,11 @@ always @(posedge clk or negedge rst_n) begin
         write_mode   <= 2'd0;        
 		read_mode    <= 2'd0;
 		err_detail_print <= 8'd0;
+        detail_enabled <= 1'b0;
+        period_has_one_w <= 1'b1;
+        period_has_one_r <= 1'b1;
+        period_has_two_w <= 1'b1;
+        period_has_two_r <= 1'b1;
         // 写时序默认 50ns
         t_avav_w       <= 16'd10;       
 		t_avqv_w       <= 16'd9;
@@ -479,6 +488,11 @@ always @(posedge clk or negedge rst_n) begin
         t_avav_w         <= t_avav_reg;
         t_avav_r         <= t_avav_reg;
         err_detail_print <= err_detail_print_reg;
+        detail_enabled <= (t_mode_reg == 4'd2) && (err_detail_print_reg == 8'd1);
+        period_has_one_w <= (commit_write_period >= 16'd1);
+        period_has_one_r <= (t_avav_reg >= 16'd1);
+        period_has_two_w <= (commit_write_period >= 16'd2);
+        period_has_two_r <= (t_avav_reg >= 16'd2);
         t_avqv_w         <= 16'd9;
         t_avqv_r         <= 16'd9;
  
@@ -604,7 +618,7 @@ reg [31:0] detail_index;
 reg [21:0] detail_address;
 reg [15:0] detail_actual;
 reg [15:0] detail_expected;
-wire detail_enabled = (test_mode == 4'd2) && (err_detail_print == 8'd1);
+// detail_enabled is committed with its base configuration above.
 // Include the incoming pulse so the producer freezes immediately after its
 // compare/snapshot edge, before this one-entry mailbox is written next cycle.
 assign detail_stall = detail_enabled && (detail_pending || err_flag);
