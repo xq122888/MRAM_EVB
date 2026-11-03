@@ -118,3 +118,34 @@ Required implementation validation after pulling this change:
 
 This cloud environment has no Vivado, so this refactor is a simulation-validated
 candidate; post-refactor placement/routing and board behavior remain unverified.
+
+### Follow-up to the f48311b implementation
+
+The uploaded implementation report for f48311b improved WNS from -1.831 ns to
+-1.083 ns and failing setup endpoints from 353 to 252, but did not meet timing.
+The 20 worst paths now originate at t_avav_r and terminate at data/address
+register enables. They still traverse a 16-bit subtract and equality chain.
+The accompanying 500-report trace has 28 ordinal sequence mismatches, versus
+50 in the preceding uploaded run. These small samples do not establish that
+timing violations are the sole cause or that board behavior is fixed.
+
+The follow-up splits the counter-plus-one/two calculations into independent
+four-bit groups with carry lookahead taken directly from the current counter.
+KEEP preserves those intermediate group nets. The configuration-to-enable path
+then uses equality without a preceding variable subtract. Zero/one and upper
+counter guards preserve the widened arithmetic, including all overflow cases.
+The cycle/boundary regression above also covers this follow-up. Placement/routing
+must still establish whether the new logic meets 200 MHz; ILA and external timing
+checks remain required.
+
+To collect the summary, up to 1000 setup failures and focused loop-index paths
+in a single file, open the new implemented design and run in Vivado Tcl Console:
+
+```tcl
+source E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/tests/collect_spi_timing.tcl
+```
+
+It prints the absolute path of a `timing_bundle_YYYYMMDD_HHMMSS.rpt` file in the
+repository root. Upload that one file. The collector changes no constraints and
+does not run synthesis, implementation, or bitstream generation. The collector
+requires Vivado; it has not been executed in Vivado in the cloud environment.

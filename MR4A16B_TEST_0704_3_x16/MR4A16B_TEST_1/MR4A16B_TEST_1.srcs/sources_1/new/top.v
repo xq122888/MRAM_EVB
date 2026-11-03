@@ -188,14 +188,32 @@ reg          loop_finish_d1;
 (* keep = "true" *) wire [31:0] loop_idx_inc = loop_idx + 32'd1;
 (* keep = "true" *) wire [31:0] err_cnt_inc = err_cnt + 32'd1;
 
-// Compare against the timing limit, rather than adding to the live counter
-// before comparing it. Guards preserve the original 32-bit expression at 0/1.
+// Compute the next counter values in independent four-bit groups. Carry
+// lookahead comes directly from the current counter, not from another adder.
+// KEEP preserves the group boundaries, avoiding a wide subtract followed by
+// equality on the timing-configuration-to-enable path.
+(* keep = "true" *) wire [3:0] hold_one_0 = addr_hold_cnt[3:0] + 4'd1;
+(* keep = "true" *) wire [3:0] hold_one_1 = addr_hold_cnt[7:4] +
+    {3'b0, (&addr_hold_cnt[3:0])};
+(* keep = "true" *) wire [3:0] hold_one_2 = addr_hold_cnt[11:8] +
+    {3'b0, (&addr_hold_cnt[7:0])};
+(* keep = "true" *) wire [3:0] hold_one_3 = addr_hold_cnt[15:12] +
+    {3'b0, (&addr_hold_cnt[11:0])};
+(* keep = "true" *) wire [3:0] hold_two_0 = addr_hold_cnt[3:0] + 4'd2;
+(* keep = "true" *) wire [3:0] hold_two_1 = addr_hold_cnt[7:4] +
+    {3'b0, (&addr_hold_cnt[3:1])};
+(* keep = "true" *) wire [3:0] hold_two_2 = addr_hold_cnt[11:8] +
+    {3'b0, (&addr_hold_cnt[7:1])};
+(* keep = "true" *) wire [3:0] hold_two_3 = addr_hold_cnt[15:12] +
+    {3'b0, (&addr_hold_cnt[11:1])};
 wire hold_before_one = (vio_t_AVAV >= 16'd1) &&
     (addr_hold_cnt[20:16] == 5'd0) &&
-    (addr_hold_cnt[15:0] == (vio_t_AVAV - 16'd1));
+    ({hold_one_3,hold_one_2,hold_one_1,hold_one_0} == vio_t_AVAV);
 wire hold_before_two = (vio_t_AVAV >= 16'd2) &&
     (addr_hold_cnt[20:16] == 5'd0) &&
-    (addr_hold_cnt[15:0] == (vio_t_AVAV - 16'd2));
+    ({hold_two_3,hold_two_2,hold_two_1,hold_two_0} == vio_t_AVAV);
+// The guards above exclude 16-bit wraparound and match the original widened
+// addition for every counter/timing value, including timing limits zero/one.
 wire addr_is_last = (vio_addr_num != 23'd0) &&
     (addr_cnt == (vio_addr_num - 23'd1));
 
