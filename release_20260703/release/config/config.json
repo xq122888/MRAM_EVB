@@ -56,7 +56,7 @@
       "dataPattern": "increment",
       "startAddressHex": "0x00000",
       "dataLengthHex": "0x100",
-      "loopCount": 1000,
+      "loopCount": 10000,
       "verboseLog": false,
       "speedNs": 40,
       "parallelWriteMode": "cen",

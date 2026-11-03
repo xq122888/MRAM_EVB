@@ -1,0 +1,9 @@
+Checkout HEAD: ec9263e332b157765e11234107c4527ebf747c20
+Project directory: E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1
+Top sources: E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v
+synth_2 status: synth_design Complete!
+synth_2 strategy: Vivado Synthesis Defaults
+impl_2 status: write_bitstream Complete!
+impl_2 strategy: Performance_Explore
+Decoded loop-limit registers in loaded design: 0
+Note: checkout/run metadata does not prove the currently loaded checkpoint is fresh.

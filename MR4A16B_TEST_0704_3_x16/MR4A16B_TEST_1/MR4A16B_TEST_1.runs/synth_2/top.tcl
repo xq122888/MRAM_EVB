@@ -17,29 +17,34 @@ proc create_report { reportName command } {
     send_msg_id runtcl-5 warning "$msg"
   }
 }
+set_param tcl.collectionResultDisplayLimit 0
+set_param xicom.use_bs_reader 1
+set_msg_config -id {Physopt 32-662} -limit 9999
+set_msg_config -id {Physopt 32-668} -limit 9999
+set_msg_config -id {Physopt 32-702} -limit 9999
 create_project -in_memory -part xc7a35tfgg484-1
 
 set_param project.singleFileAddWarning.threshold 0
 set_param project.compositeFile.enableAutoGeneration 0
 set_param synth.vivado.isSynthRun true
 set_msg_config -source 4 -id {IP_Flow 19-2162} -severity warning -new_severity info
-set_property webtalk.parent_dir E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.cache/wt [current_project]
-set_property parent.project_path E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.xpr [current_project]
+set_property webtalk.parent_dir E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.cache/wt [current_project]
+set_property parent.project_path E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.xpr [current_project]
 set_property XPM_LIBRARIES XPM_CDC [current_project]
 set_property default_lib xil_defaultlib [current_project]
 set_property target_language Verilog [current_project]
-set_property ip_output_repo e:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.cache/ip [current_project]
+set_property ip_output_repo e:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.cache/ip [current_project]
 set_property ip_cache_permissions {read write} [current_project]
 read_verilog -library xil_defaultlib {
-  E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/SPI_Slave.v
-  E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v
-  E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/trng_ro.v
-  E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v
+  E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/SPI_Slave.v
+  E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/spi.v
+  E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/trng_ro.v
+  E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/new/top.v
 }
-read_ip -quiet E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0.xci
-set_property used_in_implementation false [get_files -all e:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0_board.xdc]
-set_property used_in_implementation false [get_files -all e:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0.xdc]
-set_property used_in_implementation false [get_files -all e:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0_ooc.xdc]
+read_ip -quiet E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0.xci
+set_property used_in_implementation false [get_files -all e:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0_board.xdc]
+set_property used_in_implementation false [get_files -all e:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0.xdc]
+set_property used_in_implementation false [get_files -all e:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0_ooc.xdc]
 
 # Mark all dcp files as not used in implementation to prevent them from being
 # stitched into the results of this synthesis run. Any black boxes in the
@@ -49,14 +54,14 @@ set_property used_in_implementation false [get_files -all e:/06_MramTestBoard/MR
 foreach dcp [get_files -quiet -all -filter file_type=="Design\ Checkpoint"] {
   set_property used_in_implementation false $dcp
 }
-read_xdc E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc
-set_property used_in_implementation false [get_files E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc]
+read_xdc E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc
+set_property used_in_implementation false [get_files E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/timing.xdc]
 
-read_xdc E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/debug.xdc
-set_property used_in_implementation false [get_files E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/debug.xdc]
+read_xdc E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/debug.xdc
+set_property used_in_implementation false [get_files E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/debug.xdc]
 
-read_xdc E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/pin.xdc
-set_property used_in_implementation false [get_files E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/pin.xdc]
+read_xdc E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/pin.xdc
+set_property used_in_implementation false [get_files E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.srcs/constrs_1/new/pin.xdc]
 
 set_param ips.enableIPCacheLiteLoad 1
 close [open __synthesis_is_running__ w]

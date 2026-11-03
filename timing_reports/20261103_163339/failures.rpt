@@ -1,0 +1,16 @@
+Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2018.3 (win64) Build 2405991 Thu Dec  6 23:38:27 MST 2018
+| Date         : Tue Nov  3 16:33:41 2026
+| Host         : DESKTOP-PLD4FMJ running 64-bit major release  (build 9200)
+| Command      : report_timing -delay_type max -slack_lesser_than 0 -max_paths 1000 -file E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/timing_reports/20261103_163339/failures.rpt
+| Design       : top
+| Device       : 7a35t-fgg484
+| Speed File   : -1  PRODUCTION 1.23 2018-06-13
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Timing Report
+
+No timing paths found.
+
+

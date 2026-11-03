@@ -24,7 +24,7 @@ else
 fi
 export LD_LIBRARY_PATH
 
-HD_PWD='E:/06_MramTestBoard/MRAM_Parallel_Test_35t/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.runs/synth_2'
+HD_PWD='E:/workspace/xilinx_workspace/MRAM_EVB_spi_fix/MR4A16B_TEST_0704_3_x16/MR4A16B_TEST_1/MR4A16B_TEST_1.runs/synth_2'
 cd "$HD_PWD"
 
 HD_LOG=runme.log
