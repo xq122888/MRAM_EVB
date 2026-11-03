@@ -158,11 +158,11 @@ wire detail_stall;
 reg [21:0] error_ref_addr_sample, error_current_addr_sample;
 reg [15:0] error_data_snapshot;
 reg [15:0] error_ref_sample, error_current_sample;
-reg error_uses_reference;
+(* extract_enable="no" *) reg error_uses_reference;
 wire [21:0] error_addr_snapshot = error_uses_reference ? error_ref_addr_sample : error_current_addr_sample;
 wire [15:0] error_expected_snapshot = error_uses_reference ? error_ref_sample : error_current_sample;
 
-reg [21:0]  addr;                                   
+(* extract_enable="no" *) reg [21:0] addr;
 reg [21:0]  addr_d;                                 
 (*mark_debug="true"*)reg [22:0]  addr_cnt;
 reg [22:0]  addr_cnt_d;                                                        
@@ -570,19 +570,30 @@ end
 
 
 //----
+// One-hot source masks put address retention on the data input instead of
+// extracting a slow range-comparison-dependent CE. KEEP bounds each bit's final
+// choice to three parallel AND terms and an OR (six LUT inputs).
+(* keep="true" *) wire [21:0] address_sum = vio_addr_ini + addr_cnt;
+(* keep="true" *) reg [2:0] address_source_mask;
+always @* begin
+    if (detail_stall)
+        address_source_mask = 3'b100;
+    else if (start_d1!=0 && start_d1!=start_d2)
+        address_source_mask = 3'b001;
+    else if (flg && (keep || addr_count_less))
+        address_source_mask = 3'b010;
+    else if (hold_before_one)
+        address_source_mask = 3'b000;
+    else
+        address_source_mask = 3'b100;
+end
 always @(posedge clk or negedge rstn) begin
-    if(!rstn)
-        addr <= 22'd0;
-    else if(detail_stall)
-        addr <= addr;
-    else if(start_d1!=0 && start_d1!=start_d2)
-        addr <= vio_addr_ini;
-    else if(flg && (keep || addr_count_less))
-        addr <= vio_addr_ini + addr_cnt;
-    else if(hold_before_one)
+    if (!rstn)
         addr <= 22'd0;
     else
-        addr <= addr;
+        addr <= ({22{address_source_mask[0]}} & {2'b0,vio_addr_ini}) |
+                ({22{address_source_mask[1]}} & address_sum) |
+                ({22{address_source_mask[2]}} & addr);
 end
 
 //---
@@ -718,22 +729,31 @@ always @(posedge clk or negedge rstn) begin
 end
 wire early_error = early_match && !current_is_initial && !actual_equals_reference;
 wire late_error = late_match && !actual_equals_current;
+// The selection is only consumed when err_flg is valid. Sample the early
+// comparison independently of loop/start/late-error control; an early error
+// wins when both comparisons fire, as in the original priority chain.
+always @(posedge clk or negedge rstn) begin
+    if (!rstn)
+        error_uses_reference <= 1'b0;
+    else if (!detail_stall) begin
+        if (early_error)
+            error_uses_reference <= 1'b1;
+        else
+            error_uses_reference <= 1'b0;
+    end
+end
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         err_flg <= 1'b0;
-        error_uses_reference <= 1'b0;
     end else if (detail_enabled && (spi_start_test || start_d1!=start_d2 || next_loop_start_d1)) begin
         err_flg <= 1'b0;
     end else begin
         err_flg <= 1'b0;
         if (!detail_stall && flg && rd_en_d) begin
-            if (early_error) begin
+            if (early_error)
                 err_flg <= 1'b1;
-                error_uses_reference <= 1'b1;
-            end else if (late_error) begin
+            else if (late_error)
                 err_flg <= 1'b1;
-                error_uses_reference <= 1'b0;
-            end
         end
     end
 end
