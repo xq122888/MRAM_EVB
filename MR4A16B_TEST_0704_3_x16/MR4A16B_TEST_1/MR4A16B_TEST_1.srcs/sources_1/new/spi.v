@@ -475,16 +475,23 @@ end
 // =========================================================================
 
 // ---------- 8.1 ±ßÑØ¼ì²â ----------
+// Only the first synchronizer flop samples the asynchronous CS input.
+// Internal edge pulses use the second stage and its delayed copy.
+(* ASYNC_REG = "TRUE" *) reg [1:0] cs_n_sync;
 reg        cs_n_d1;
 wire       cs_n_neg;
 wire       cs_n_pos;
-
 always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) cs_n_d1 <= 1'b1;
-    else        cs_n_d1 <= spi_cs_n;
+    if (!rst_n) begin
+        cs_n_sync <= 2'b11;
+        cs_n_d1 <= 1'b1;
+    end else begin
+        cs_n_sync <= {cs_n_sync[0],spi_cs_n};
+        cs_n_d1 <= cs_n_sync[1];
+    end
 end
-assign cs_n_neg = !spi_cs_n && cs_n_d1;
-assign cs_n_pos = spi_cs_n && !cs_n_d1;
+assign cs_n_neg = !cs_n_sync[1] && cs_n_d1;
+assign cs_n_pos = cs_n_sync[1] && !cs_n_d1;
 
 // ---------- 8.2 ´ý·¢ËÍÊÂ¼þËø´æ ----------
 reg        pending_test_complete;

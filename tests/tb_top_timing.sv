@@ -134,7 +134,9 @@ module tb_top_predicates;
   task check;
     begin
       #1;cases=cases+1;
-      if(dut.hold_before_one !== (hold+1==period) ||
+      if(dut.loop_idx_inc !== (index+32'd1) ||
+         dut.addr_cnt_inc !== ((count+32'd1) & 32'h007fffff) ||
+         dut.hold_before_one !== (hold+1==period) ||
          dut.hold_before_one !== (hold==period-1) ||
          dut.hold_before_two !== (hold+2==period) ||
          dut.addr_is_last !== (count==length-1) ||

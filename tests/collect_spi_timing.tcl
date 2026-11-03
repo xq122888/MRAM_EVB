@@ -11,12 +11,19 @@ proc mram_collect_spi_timing {repo_root} {
     set summary_path [file join $report_dir summary.rpt]
     set failures_path [file join $report_dir failures.rpt]
     set loops_path [file join $report_dir loop_idx.rpt]
+    set cdc_path [file join $report_dir cdc.rpt]
     report_timing_summary -delay_type min_max -report_unconstrained -max_paths 20 -file $summary_path
     report_timing -delay_type max -slack_lesser_than 0 -max_paths 1000 -file $failures_path
     report_timing -from $loop_regs -delay_type max -max_paths 100 -file $loops_path
+    if {[catch {report_cdc -details -file $cdc_path} cdc_error]} {
+        set failed_report [open $cdc_path w]
+        puts $failed_report "CDC report generation failed: $cdc_error"
+        close $failed_report
+        puts "WARNING: CDC reporting failed; see the bundle. CDC is not validated."
+    }
     set bundle_path [file join $repo_root timing_bundle_${stamp}.rpt]
     set bundle [open $bundle_path w]
-    foreach path [list $summary_path $failures_path $loops_path] {
+    foreach path [list $summary_path $failures_path $loops_path $cdc_path] {
         puts $bundle "\n===== [file tail $path] =====\n"
         set input_report [open $path r]
         puts $bundle [read $input_report]

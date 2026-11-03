@@ -29,15 +29,34 @@ localparam	SFIFT_NUM = log2(DATA_WIDTH);
 
 reg	[DATA_WIDTH-1:0]		data_reg	;	//the register to latch the data_in,also the shift register
 reg	[ SFIFT_NUM-1:0]		sampl_num	;	//the counter to count the number of sample
-reg							sclk_a		;	//sclk register to capture the edge of sclk
-reg							sclk_b		;	//sclk register to capture the edge of sclk
+(* ASYNC_REG = "TRUE" *) reg							sclk_a		;	//sclk register to capture the edge of sclk
+(* ASYNC_REG = "TRUE" *) reg							sclk_b		;	//sclk register to capture the edge of sclk
 wire						sclk_posedge;	//posedge of sclk
 wire						sclk_negedge;	//negedge of sclk
-reg							cs_n_a		;	//cs_n register to capture the edge of cs_n
-reg							cs_n_b		;	//cs_n register to capture the edge of cs_n
+(* ASYNC_REG = "TRUE" *) reg							cs_n_a		;	//cs_n register to capture the edge of cs_n
+(* ASYNC_REG = "TRUE" *) reg							cs_n_b		;	//cs_n register to capture the edge of cs_n
 wire						cs_n_negedge;	//negedge of cs_n to latch the data
 wire						shift_en_internal;	//the signal to enable shift register to generate mosi
 wire						sampl_en_internal;	//the signal to sample the data from miso
+
+// Edge detection must not consume the first synchronizer stage.
+reg sclk_d;
+reg cs_n_d;
+(* ASYNC_REG = "TRUE" *) reg mosi_meta;
+(* ASYNC_REG = "TRUE" *) reg mosi_sync;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        sclk_d <= CPOL;
+        cs_n_d <= 1'b1;
+        mosi_meta <= 1'b0;
+        mosi_sync <= 1'b0;
+    end else begin
+        sclk_d <= sclk_b;
+        cs_n_d <= cs_n_b;
+        mosi_meta <= mosi;
+        mosi_sync <= mosi_meta;
+    end
+end
 
 //------------------------------------------
 //to capture the edge of sclk
@@ -51,8 +70,8 @@ always @(posedge clk or negedge rst_n) begin
 	end
 end
 
-assign sclk_posedge = ~sclk_b & sclk_a;
-assign sclk_negedge = ~sclk_a & sclk_b;
+assign sclk_posedge = ~sclk_d & sclk_b;
+assign sclk_negedge = ~sclk_b & sclk_d;
 
 //------------------------------------------
 //to capture the edge of cs_n
@@ -66,7 +85,7 @@ always @(posedge clk or negedge rst_n) begin
 	end
 end
 
-assign cs_n_negedge = ~cs_n_a & cs_n_b;
+assign cs_n_negedge = ~cs_n_b & cs_n_d;
 
 //------------------------------------------
 //==============================================
@@ -101,7 +120,7 @@ always @(posedge clk or negedge rst_n) begin
 		data_reg <= 'd0;
 	else if(cs_n_negedge)
 		data_reg <= data_in;
-	else if (!cs_n & shift_en_internal) 
+	else if (!cs_n_b & shift_en_internal)
 		data_reg <= {data_reg[DATA_WIDTH-2:0], 1'b0};
 	else
 		data_reg <= data_reg;
@@ -117,8 +136,8 @@ assign miso = !cs_n ? data_reg[DATA_WIDTH-1] : 1'd0;
 always @(posedge clk or negedge rst_n) begin
 	if (!rst_n) 
 		data_out <= 'd0;
-	else if (!cs_n & sampl_en_internal) 
-		data_out <= {data_out[DATA_WIDTH-2:0], mosi};
+	else if (!cs_n_b & sampl_en_internal)
+		data_out <= {data_out[DATA_WIDTH-2:0], mosi_sync};
 	else
 		data_out <= data_out;
 end
@@ -127,9 +146,9 @@ end
 always @(posedge clk or negedge rst_n) begin
 	if (!rst_n) 
 		sampl_num <= 'd0;
-	else if (cs_n)
+	else if (cs_n_b)
 		sampl_num <= 'd0;
-	else if (!cs_n & sampl_en_internal) 
+	else if (!cs_n_b & sampl_en_internal)
 		if (sampl_num == DATA_WIDTH)
 			sampl_num <= 'd1;
 		else

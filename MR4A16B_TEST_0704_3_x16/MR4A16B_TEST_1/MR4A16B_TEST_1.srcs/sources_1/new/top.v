@@ -182,40 +182,77 @@ reg          loop_finish_d1;
 (*mark_debug="true"*)reg   next_loop_start_d3;
 
 
-// Keep increments independent of the update-enable logic. Otherwise synthesis
-// can fold the enable into the carry chain, serializing compare and increment.
-(* keep = "true" *) wire [22:0] addr_cnt_inc = addr_cnt + 23'd1;
-(* keep = "true" *) wire [31:0] loop_idx_inc = loop_idx + 32'd1;
+// Partition increments into four-bit groups with carry lookahead from the
+// source counter. Preserving each group avoids a 23/32-bit serial carry chain.
+wire [22:0] addr_cnt_inc;
+wire [31:0] loop_idx_inc;
+generate
+    genvar inc_group;
+    for (inc_group=0; inc_group<8; inc_group=inc_group+1) begin : loop_increment
+        wire carry_in;
+        if (inc_group==0) begin : first_group
+            assign carry_in = 1'b1;
+        end else begin : later_group
+            assign carry_in = &loop_idx[inc_group*4-1:0];
+        end
+        (* keep = "true" *) wire [3:0] value =
+            loop_idx[inc_group*4 +: 4] + {3'b0,carry_in};
+        assign loop_idx_inc[inc_group*4 +: 4] = value;
+    end
+    for (inc_group=0; inc_group<6; inc_group=inc_group+1) begin : addr_increment
+        wire carry_in;
+        if (inc_group==0) begin : first_group
+            assign carry_in = 1'b1;
+        end else begin : later_group
+            assign carry_in = &addr_cnt[inc_group*4-1:0];
+        end
+        if (inc_group==5) begin : last_group
+            (* keep = "true" *) wire [2:0] value =
+                addr_cnt[22:20] + {2'b0,carry_in};
+            assign addr_cnt_inc[22:20] = value;
+        end else begin : full_group
+            (* keep = "true" *) wire [3:0] value =
+                addr_cnt[inc_group*4 +: 4] + {3'b0,carry_in};
+            assign addr_cnt_inc[inc_group*4 +: 4] = value;
+        end
+    end
+endgenerate
 (* keep = "true" *) wire [31:0] err_cnt_inc = err_cnt + 32'd1;
 
-// Compute the next counter values in independent four-bit groups. Carry
-// lookahead comes directly from the current counter, not from another adder.
-// KEEP preserves the group boundaries, avoiding a wide subtract followed by
-// equality on the timing-configuration-to-enable path.
-(* keep = "true" *) wire [3:0] hold_one_0 = addr_hold_cnt[3:0] + 4'd1;
-(* keep = "true" *) wire [3:0] hold_one_1 = addr_hold_cnt[7:4] +
-    {3'b0, (&addr_hold_cnt[3:0])};
-(* keep = "true" *) wire [3:0] hold_one_2 = addr_hold_cnt[11:8] +
-    {3'b0, (&addr_hold_cnt[7:0])};
-(* keep = "true" *) wire [3:0] hold_one_3 = addr_hold_cnt[15:12] +
-    {3'b0, (&addr_hold_cnt[11:0])};
-(* keep = "true" *) wire [3:0] hold_two_0 = addr_hold_cnt[3:0] + 4'd2;
-(* keep = "true" *) wire [3:0] hold_two_1 = addr_hold_cnt[7:4] +
-    {3'b0, (&addr_hold_cnt[3:1])};
-(* keep = "true" *) wire [3:0] hold_two_2 = addr_hold_cnt[11:8] +
-    {3'b0, (&addr_hold_cnt[7:1])};
-(* keep = "true" *) wire [3:0] hold_two_3 = addr_hold_cnt[15:12] +
-    {3'b0, (&addr_hold_cnt[11:1])};
+// Precompare both carry choices in parallel. A carry from a low group then
+// selects a one-bit match; it no longer has to traverse an upper-group adder
+// and equality logic before reaching the control enables.
+wire [3:0] hold_one_match;
+wire [3:0] hold_two_match;
+generate
+    genvar hold_group;
+    for (hold_group=0; hold_group<4; hold_group=hold_group+1) begin : hold_compare
+        (* keep = "true" *) wire same_match =
+            (addr_hold_cnt[hold_group*4 +: 4] == vio_t_AVAV[hold_group*4 +: 4]);
+        (* keep = "true" *) wire [3:0] plus_one =
+            addr_hold_cnt[hold_group*4 +: 4] + 4'd1;
+        (* keep = "true" *) wire plus_match =
+            (plus_one == vio_t_AVAV[hold_group*4 +: 4]);
+        if (hold_group==0) begin : low_group
+            (* keep = "true" *) wire [3:0] plus_two = addr_hold_cnt[3:0] + 4'd2;
+            assign hold_one_match[0] = plus_match;
+            assign hold_two_match[0] = (plus_two == vio_t_AVAV[3:0]);
+        end else begin : high_group
+            assign hold_one_match[hold_group] =
+                (&addr_hold_cnt[hold_group*4-1:0]) ? plus_match : same_match;
+            assign hold_two_match[hold_group] =
+                (&addr_hold_cnt[hold_group*4-1:1]) ? plus_match : same_match;
+        end
+    end
+endgenerate
+// Exclude modulo-16-bit wraparound to retain the original widened arithmetic.
 wire hold_before_one = (vio_t_AVAV >= 16'd1) &&
-    (addr_hold_cnt[20:16] == 5'd0) &&
-    ({hold_one_3,hold_one_2,hold_one_1,hold_one_0} == vio_t_AVAV);
+    (addr_hold_cnt[20:16] == 5'd0) && (&hold_one_match);
 wire hold_before_two = (vio_t_AVAV >= 16'd2) &&
-    (addr_hold_cnt[20:16] == 5'd0) &&
-    ({hold_two_3,hold_two_2,hold_two_1,hold_two_0} == vio_t_AVAV);
-// The guards above exclude 16-bit wraparound and match the original widened
-// addition for every counter/timing value, including timing limits zero/one.
-wire addr_is_last = (vio_addr_num != 23'd0) &&
-    (addr_cnt == (vio_addr_num - 23'd1));
+    (addr_hold_cnt[20:16] == 5'd0) && (&hold_two_match);
+// The address limit is 21 bits; the zero guard excludes wraparound of the
+// 23-bit increment, matching addr_cnt + 1 == vio_addr_num for every value.
+wire addr_is_last = (vio_addr_num != 21'd0) && (addr_cnt_inc == vio_addr_num);
 
 // Equivalent to loop_idx < loop_count - 1, including loop_count == 0.
 // This removes subtraction of loop_count ahead of the update decision.

@@ -149,3 +149,60 @@ It prints the absolute path of a `timing_bundle_YYYYMMDD_HHMMSS.rpt` file in the
 repository root. Upload that one file. The collector changes no constraints and
 does not run synthesis, implementation, or bitstream generation. The collector
 requires Vivado; it has not been executed in Vivado in the cloud environment.
+
+### Follow-up to the 36fa661 implementation
+
+The next hardware timing bundle shows further improvement: WNS -0.583 ns,
+TNS -38.242 ns, 129 failing setup endpoints and WHS +0.019 ns. Timing still
+fails. Of those 129, 7 are internal ILA endpoints; most remaining functional
+failures are loop-index feedback, address enables, terminal address detection
+and counter/data controls. The new worst loop-index path traverses the serial
+32-bit increment before its completion comparison (7 CARRY4 cells). The worst
+address-enable path is dominated by routing (3.366 ns of 5.290 ns data delay).
+
+The next candidate partitions the loop/address increments into four-bit groups
+with independent carry lookahead, and replaces terminal-address subtraction
+with a comparison of the grouped increment. Period comparisons precompute both
+carry choices in each group; a low-group carry selects a match bit rather than
+feeding an upper-group adder followed by equality. The same cycle comparison and
+full-width boundary tests validate these expressions; the predicate test now
+also checks the increment results directly.
+
+For the next implementation, select the Vivado 2018.3 `Performance_Explore`
+implementation strategy to enable its timing-oriented implementation/physical
+optimization flow. In Tcl, before rerunning implementation:
+
+```tcl
+set_property strategy Performance_Explore [get_runs impl_2]
+```
+
+Then reset/rerun synthesis and implementation and collect the timing bundle as
+above. This changes implementation choices, not clock periods or timing
+exceptions. The strategy has not been run in the cloud; only the local Vivado
+result can demonstrate timing closure. Any remaining ILA, functional, hold or
+external timing issues still require review before claiming the design works.
+
+The accompanying 36fa661 board trace contains 55 sequence mismatches in 500
+frames: 48 are one behind, 6 are two behind, and one is 14 ahead. Raw chunks
+and parsed frames agree. This does not demonstrate communication recovery;
+sequence errors must be checked separately from timing-summary improvement.
+
+A separate code review found uncontained asynchronous input usage:
+
+- spi.v formed internal CS edge pulses directly from the asynchronous CS port
+  and a single delayed register. CS now passes two ASYNC_REG stages before
+  internal edge detection and frame-buffer control.
+- SPI_Slave.v formed SCLK/CS edges using the first synchronizer stage and used
+  raw CS to gate receive/shift state. Edge detectors now compare the second
+  stage to a delayed copy; synchronous state uses the second-stage CS only.
+- MOSI is synchronized before capture. Raw CS remains only on external MISO
+  output gating; it does not qualify internal state updates.
+
+The regression sweeps SPI half-periods 100–111 ns (5 MHz to approximately
+4.5 MHz) with drifting phase against the 200 MHz processing clock. This change
+adds synchronization latency. It does not establish support for every selectable
+SPI frequency or mode, and RTL simulation cannot reproduce analog metastability.
+The frame wire format and MRAM clock period remain unchanged. The timing-bundle
+collector now also includes report_cdc -details for implementation review;
+CDC reports alone do not establish external setup/hold margins for unclocked
+input ports. Verify actual physical margins and observed SPI bytes on hardware.

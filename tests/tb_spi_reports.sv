@@ -85,6 +85,7 @@ module tb_spi_reports;
     half_period=111;#30;rst_n=1;#100;
     configure(0);
     for(i=499;i<=1000;i=i+1) begin
+      half_period=100+(i%12); // 5 MHz through approximately 4.5 MHz, drifting phase
       loop_no=i;notify;
       if(i==672) poll(11,4);
       poll(11,0);
