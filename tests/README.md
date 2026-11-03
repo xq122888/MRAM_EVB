@@ -293,3 +293,25 @@ including invalid-write fallback, zero/one timing boundaries, and checksum rejec
 The full cycle comparison and end-to-end SPI/controller tests remain required.
 These are functional guarantees only; routed setup/hold and physical SPI timing
 must still be checked after rebuilding the implementation.
+
+### Last bank-selection-to-enable path
+
+The e5ef9ea implementation removes the GN and terminal-address failures. The
+uploaded report confirms the intended source/strategy and shows WNS -0.011 ns,
+TNS -0.011 ns, one failing setup endpoint (rd_en_d2 replica to dout[13]/CE),
+and WHS +0.032 ns with no hold violations. Loop-index paths meet timing.
+
+The next candidate computes the write/read period-boundary comparisons in
+parallel, then selects their one-bit results. Kept intermediate results prevent
+folding the operation back into a wide bank mux followed by equality. This aims
+to shorten the remaining selector-to-enable path without adding a cycle or
+changing frame/MRAM timing. The base periods, decoded limits and zero/one guards
+remain coherent per bank.
+
+The predicate suite now checks 354,536 cases, including unequal read/write
+periods, both selector values, 0/1 and 16-bit-wrap guard cases, and GN underflow.
+The 10-report end-to-end test additionally uses write-mode-3 fallback (10 cycles)
+with a configured 7-cycle read period in write/read mode, so actual top-level
+bank switching is tested without forced configuration signals. The other full
+cycle, serial and configuration-atomicity regressions still pass. Only a new
+Vivado implementation can establish whether setup/hold now meet timing.

@@ -48,6 +48,7 @@ module tb_top_timing;
     force dut.loop_count=loops; force refdut.loop_count=loops;
     force dut.spi_last_loop_index=decoded_last_loop;
     force dut.spi_last_test_address=decoded_last_address;
+    force dut.spi_t_avav_w=period;force dut.spi_t_avav_r=period;
     force dut.spi_period_last_w=decoded_period_last;
     force dut.spi_period_last_r=decoded_period_last;
     force dut.spi_period_before_last_w=decoded_period_before_last;
@@ -136,31 +137,39 @@ module tb_top_predicates;
   reg [20:0] hold=0, length=0;
   reg [22:0] count=0;
   reg [15:0] period=0;
+  reg split_banks=0;
+  reg [15:0] period_w_alt=0,period_r_alt=0;
+  wire [15:0] unit_period_w=split_banks?period_w_alt:period;
+  wire [15:0] unit_period_r=split_banks?period_r_alt:period;
   reg [31:0] index=0,loops=0;
   wire [31:0] decoded_last_loop=loops-32'd1;
   wire [20:0] decoded_last_address=length-21'd1;
-  wire [15:0] decoded_period_last=period-16'd1;
-  wire [15:0] decoded_period_before_last=period-16'd2;
-  wire [20:0] decoded_gn_write={5'b0,period}-{5'b0,dut.spi_t_gl2gh_w};
-  wire [20:0] decoded_gn_read={5'b0,period}-{5'b0,dut.spi_t_gl2gh_r};
+  wire [15:0] decoded_period_last_w=unit_period_w-16'd1;
+  wire [15:0] decoded_period_last_r=unit_period_r-16'd1;
+  wire [15:0] decoded_period_before_last_w=unit_period_w-16'd2;
+  wire [15:0] decoded_period_before_last_r=unit_period_r-16'd2;
+  wire [20:0] decoded_gn_write={5'b0,unit_period_w}-{5'b0,dut.spi_t_gl2gh_w};
+  wire [20:0] decoded_gn_read={5'b0,unit_period_r}-{5'b0,dut.spi_t_gl2gh_r};
   reg [1:0] read_select=0;
   reg [15:0] unit_gl_w=2,unit_gl_r=10;
   wire phase_d=read_select[0],phase_d2=read_select[1];
+  wire [15:0] unit_selected_period=phase_d2?unit_period_r:unit_period_w;
   integer n,k,cases=0;
   top dut(.clkp(1'b0),.clkn(1'b1),.rst_n(1'b0),.spi_cs_n(1'b1),
           .spi_sclk(1'b0),.spi_mosi(1'b0));
   initial begin
-    force dut.addr_hold_cnt=hold;force dut.vio_t_AVAV=period;
+    force dut.addr_hold_cnt=hold;force dut.vio_t_AVAV=unit_selected_period;
     force dut.addr_cnt=count;force dut.vio_addr_num=length;
     force dut.loop_idx=index;force dut.loop_count=loops;
     force dut.rd_en_d=phase_d;force dut.rd_en_d2=phase_d2;
     force dut.spi_t_gl2gh_w=unit_gl_w;force dut.spi_t_gl2gh_r=unit_gl_r;
     force dut.spi_last_loop_index=decoded_last_loop;
     force dut.spi_last_test_address=decoded_last_address;
-    force dut.spi_period_last_w=decoded_period_last;
-    force dut.spi_period_last_r=decoded_period_last;
-    force dut.spi_period_before_last_w=decoded_period_before_last;
-    force dut.spi_period_before_last_r=decoded_period_before_last;
+    force dut.spi_t_avav_w=unit_period_w;force dut.spi_t_avav_r=unit_period_r;
+    force dut.spi_period_last_w=decoded_period_last_w;
+    force dut.spi_period_last_r=decoded_period_last_r;
+    force dut.spi_period_before_last_w=decoded_period_before_last_w;
+    force dut.spi_period_before_last_r=decoded_period_before_last_r;
     force dut.spi_gn_release_w=decoded_gn_write;
     force dut.spi_gn_release_r=decoded_gn_read;
   end
@@ -169,10 +178,10 @@ module tb_top_predicates;
       #1;cases=cases+1;
       if(dut.loop_idx_inc !== (index+32'd1) ||
          dut.addr_cnt_inc !== ((count+32'd1) & 32'h007fffff) ||
-         dut.gn_release_match !== (hold==(period-dut.vio_t_GL2GH)) ||
-         dut.hold_before_one !== (hold+1==period) ||
-         dut.hold_before_one !== (hold==period-1) ||
-         dut.hold_before_two !== (hold+2==period) ||
+         dut.gn_release_match !== (hold==(unit_selected_period-dut.vio_t_GL2GH)) ||
+         dut.hold_before_one !== (hold+1==unit_selected_period) ||
+         dut.hold_before_one !== (hold==unit_selected_period-1) ||
+         dut.hold_before_two !== (hold+2==unit_selected_period) ||
          dut.addr_is_last !== (count==length-1) ||
          dut.addr_is_last !== (count+1==length) ||
          dut.loop_has_more !== (index<loops-1))
@@ -206,7 +215,21 @@ module tb_top_predicates;
         hold=hold+1;check;
       end
     end
-    $display("PASS: %0d predicate comparisons against original arithmetic, including GN underflow/bank selection",cases);
+    split_banks=1;
+    for(n=0;n<512;n=n+1) begin
+      period_w_alt=(n<256)?n:(65535-(n-256));
+      period_r_alt=(n<256)?(65535-n):(n-256);
+      for(k=0;k<4;k=k+1) begin
+        read_select=k;#1;
+        hold=unit_selected_period-1;check;
+        hold=unit_selected_period-2;check;
+        hold=(phase_d2?unit_period_w:unit_period_r)-1;check;
+        hold=21'h0ffff;check;
+        hold=21'h0fffe;check;
+        hold=21'h1fffff;check;
+      end
+    end
+    $display("PASS: %0d predicate comparisons against original arithmetic, including unequal banks and GN underflow",cases);
     $finish;
   end
 endmodule

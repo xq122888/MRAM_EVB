@@ -191,19 +191,23 @@ wire [20:0] gn_release_limit = rd_en_d2 ? spi_gn_release_r : spi_gn_release_w;
 wire gn_release_match = (addr_hold_cnt == gn_release_limit);
 wire [15:0] spi_period_last_w, spi_period_last_r;
 wire [15:0] spi_period_before_last_w, spi_period_before_last_r;
-wire [15:0] period_last = rd_en_d2 ? spi_period_last_r : spi_period_last_w;
-wire [15:0] period_before_last = rd_en_d2 ?
-    spi_period_before_last_r : spi_period_before_last_w;
-
 // Native FPGA carry chains are used only for the data increment, independently
 // of its enable. The terminal decisions do not consume the increment result.
 (* keep = "true" *) wire [22:0] addr_cnt_inc = addr_cnt + 23'd1;
 (* keep = "true" *) wire [31:0] loop_idx_inc = loop_idx + 32'd1;
 (* keep = "true" *) wire [31:0] err_cnt_inc = err_cnt + 32'd1;
-wire hold_before_one = (vio_t_AVAV >= 16'd1) &&
-    (addr_hold_cnt == period_last);
-wire hold_before_two = (vio_t_AVAV >= 16'd2) &&
-    (addr_hold_cnt == period_before_last);
+// Compare each bank independently before selecting its one-bit result. KEEP
+// prevents folding this back into a wide bank mux ahead of the comparator.
+(* keep = "true" *) wire hold_one_w = (spi_t_avav_w >= 16'd1) &&
+    (addr_hold_cnt == spi_period_last_w);
+(* keep = "true" *) wire hold_one_r = (spi_t_avav_r >= 16'd1) &&
+    (addr_hold_cnt == spi_period_last_r);
+(* keep = "true" *) wire hold_two_w = (spi_t_avav_w >= 16'd2) &&
+    (addr_hold_cnt == spi_period_before_last_w);
+(* keep = "true" *) wire hold_two_r = (spi_t_avav_r >= 16'd2) &&
+    (addr_hold_cnt == spi_period_before_last_r);
+wire hold_before_one = rd_en_d2 ? hold_one_r : hold_one_w;
+wire hold_before_two = rd_en_d2 ? hold_two_r : hold_two_w;
 // Bound equality reduction to small LUT groups instead of a wide carry
 // reduction. Preserve the zero-length guard and the two upper counter bits.
 (* keep = "true" *) wire [7:0] addr_last_group;
