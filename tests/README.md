@@ -69,3 +69,52 @@ Remaining board checks:
   the CH347 timing and board/cable delay budget.
 
 Vivado timing analysis and physical capture were unavailable in the cloud run.
+
+## Counter/control timing refactor
+
+The hardware reports uploaded on November 3 show 353 failing setup endpoints
+(WNS -1.831 ns, TNS -161.269 ns). This includes 31 loop-index bits (worst
+-0.711 ns), loop completion/done controls, and a loop-index change-detection
+path to data control (-0.875 ns in the focused report). The worst address-counter
+path serializes compare/control and increment through 12 CARRY4 cells.
+There are also ILA internal setup failures, and external SPI timing remains
+unconstrained. These are implementation observations, not proof that any one
+path explains all sequence-number errors.
+
+`top.v` now:
+
+- Produces the next-loop pulse in the same register update as the loop index,
+  removing the 32-bit delayed-index XOR/reduction from downstream control.
+  Reset clears this event; restart from a nonzero index still emits the event.
+- Keeps increments independent of their enables, to discourage synthesis from
+  serializing the decision and increment carry chains.
+- Rewrites timing/address boundary comparisons with explicit operand widths and
+  zero/one guards, and removes subtraction of loop_count before its comparison.
+
+Run the cycle comparison and arithmetic boundary tests:
+
+```sh
+bash tests/run_top_timing.sh
+```
+
+Use the same IVERILOG/VVP/IVL_BASE environment variables as above for cloud tools.
+The runner reads pre-refactor `top.v` from Git commit a317d2b; history containing
+that commit and Python 3 are required. It compares actual RTL state/pins over
+617,129 cycles (modes 0/1/2, ACK timing, restart, periods 7 through 65535, zero
+loop count and 32-bit carry boundaries), and checks 342,144 arithmetic cases
+including all 65,536 timing-limit values. Ideal clock/TRNG/read-bus models are
+used **only** for this counter/control comparison. They do not verify actual
+clock generation, randomness, MRAM operation, signal integrity, or timing closure.
+
+Required implementation validation after pulling this change:
+
+1. Reset the synthesis run and rerun synthesis and implementation in Vivado 2018.3.
+2. Inspect the new setup/hold summaries and failing paths, including ILA paths.
+   KEEP hints and algebraic refactoring do not guarantee a particular routed WNS.
+3. Preserve the real 200 MHz clock constraints. Treat remaining negative slack
+   as unresolved; do not mask it using false paths or an inaccurate clock period.
+4. After timing closure, regenerate/program the bitstream and repeat the same
+   SPI test. Recheck external SPI constraints and physical timing separately.
+
+This cloud environment has no Vivado, so this refactor is a simulation-validated
+candidate; post-refactor placement/routing and board behavior remain unverified.

@@ -171,16 +171,39 @@ reg         stop            ;
 
 wire [31:0]  loop_count ;
 (*mark_debug="true"*)reg  [31:0]  loop_idx ;
-reg [31:0] loop_idx_d1;
 (*mark_debug="true"*)reg          loop_finish;           // 当前循环结束，等待发送确认
 reg          loop_finish_d1;
 (*mark_debug="true"*)reg          loop_done;           // 所有循环完成标志
 
 //reg   next_loop_start;
-(*mark_debug="true"*)wire  next_loop_start_d1 = (loop_idx != loop_idx_d1); 
+// Emit this event with the loop update, avoiding a 32-bit change detector.
+(*mark_debug="true"*)reg   next_loop_start_d1;
 (*mark_debug="true"*)reg   next_loop_start_d2;
 (*mark_debug="true"*)reg   next_loop_start_d3;
 
+
+// Keep increments independent of the update-enable logic. Otherwise synthesis
+// can fold the enable into the carry chain, serializing compare and increment.
+(* keep = "true" *) wire [22:0] addr_cnt_inc = addr_cnt + 23'd1;
+(* keep = "true" *) wire [31:0] loop_idx_inc = loop_idx + 32'd1;
+(* keep = "true" *) wire [31:0] err_cnt_inc = err_cnt + 32'd1;
+
+// Compare against the timing limit, rather than adding to the live counter
+// before comparing it. Guards preserve the original 32-bit expression at 0/1.
+wire hold_before_one = (vio_t_AVAV >= 16'd1) &&
+    (addr_hold_cnt[20:16] == 5'd0) &&
+    (addr_hold_cnt[15:0] == (vio_t_AVAV - 16'd1));
+wire hold_before_two = (vio_t_AVAV >= 16'd2) &&
+    (addr_hold_cnt[20:16] == 5'd0) &&
+    (addr_hold_cnt[15:0] == (vio_t_AVAV - 16'd2));
+wire addr_is_last = (vio_addr_num != 23'd0) &&
+    (addr_cnt == (vio_addr_num - 23'd1));
+
+// Equivalent to loop_idx < loop_count - 1, including loop_count == 0.
+// This removes subtraction of loop_count ahead of the update decision.
+wire loop_has_more = (loop_count == 32'd0) ?
+    (loop_idx != 32'hffffffff) :
+    ((loop_idx < loop_count) && (loop_idx_inc != loop_count));
 
 // ========== SPI协议模块实例化 ==========
 spi_protocol u_spi_protocol (
@@ -303,7 +326,6 @@ always @(posedge clk or negedge rst_n) begin
         start_d3    <= 0        ;
         start_d4    <= 0        ;
         
-        loop_idx_d1  <= 32'd0    ;
 //        next_loop_start <= 0    ;
 //        next_loop_start_d1 <= 0 ;
         next_loop_start_d2 <= 0 ;
@@ -329,7 +351,6 @@ always @(posedge clk or negedge rst_n) begin
         start_d3    <= start_d2 ;
         start_d4    <= start_d3 ;
 
-        loop_idx_d1       <= loop_idx;
 //        next_loop_start_d1 <= next_loop_start ;
         next_loop_start_d2 <= next_loop_start_d1 ;
         next_loop_start_d3 <= next_loop_start_d2 ;
@@ -356,6 +377,7 @@ end
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         loop_idx          <= 32'd0;
+        next_loop_start_d1 <= 1'b0;
         loop_done         <= 1'b0;
         loop_finish       <= 1'b0;
 //        next_loop_start   <= 1'b0;
@@ -364,12 +386,14 @@ always @(posedge clk or negedge rstn) begin
     else if (start_d1 != start_d2) begin
         // 测试开始时复位所有循环状态
         loop_idx          <= 32'd0;
+        next_loop_start_d1 <= (loop_idx != 32'd0);
         loop_done         <= 1'b0;
         loop_finish       <= 1'b0;
 //        next_loop_start   <= 1'b0;
         frame_ack_latched <= 1'b0;
     end
     else begin
+        next_loop_start_d1 <= 1'b0;
         // 默认清除 next_loop_start（保证单周期脉冲）
 //        next_loop_start <= 1'b0;
 
@@ -379,7 +403,7 @@ always @(posedge clk or negedge rstn) begin
         end
 
         // ---------- 2. 检测循环结束条件（与原逻辑完全一致） ----------
-        if (flg && (addr_cnt == vio_addr_num - 1) && (addr_hold_cnt + 1 == vio_t_AVAV)) begin
+        if (flg && (addr_is_last) && (hold_before_one)) begin
             if (vio_TMODE == 4'd2 && rd_en_d) begin
                 if (!loop_finish) loop_finish <= 1'b1;
             end
@@ -394,8 +418,9 @@ always @(posedge clk or negedge rstn) begin
             loop_finish       <= 1'b0;     // 清除结束标志
 //            next_loop_start   <= 1'b1;     // 产生启动脉冲
 
-            if (loop_idx < loop_count - 1) begin
-                loop_idx <= loop_idx + 1;   // 进入下一循环
+            if (loop_has_more) begin
+                next_loop_start_d1 <= 1'b1;
+                loop_idx <= loop_idx_inc;   // 进入下一循环
             end
             else begin
                 loop_done <= 1'b1;          // 所有循环完成
@@ -415,7 +440,7 @@ always @(posedge clk or negedge rstn) begin
         addr <= vio_addr_ini + addr_cnt;
     else if(flg && addr_cnt<vio_addr_num)
         addr <= vio_addr_ini + addr_cnt;
-    else if(addr_hold_cnt+1==vio_t_AVAV)
+    else if(hold_before_one)
         addr <= 22'd0;
     else
         addr <= addr;
@@ -427,10 +452,10 @@ always @(posedge clk or negedge rstn) begin
         addr_cnt <= 22'd0;
     else if(start_d1 != start_d2 || next_loop_start_d1)   // 增加 next_loop_start
         addr_cnt <= 22'd0;
-    else if(keep && addr_cnt + 1 == vio_addr_num && addr_hold_cnt + 2 == vio_t_AVAV)
+    else if(keep && addr_is_last && hold_before_two)
         addr_cnt <= 22'd0;
-    else if(addr_cnt < vio_addr_num && addr_hold_cnt + 2 == vio_t_AVAV)
-        addr_cnt <= addr_cnt + 1;
+    else if(addr_cnt < vio_addr_num && hold_before_two)
+        addr_cnt <= addr_cnt_inc;
     else
         addr_cnt <= addr_cnt;
 end
@@ -495,7 +520,7 @@ always @(posedge clk or negedge rstn) begin
     else if(start_d1 != start_d2 || next_loop_start_d1)  // 增加循环变化清零
         err_cnt <= 32'd0;
     else if(err_flg)
-        err_cnt <= err_cnt + 1;
+        err_cnt <= err_cnt_inc;
 end
 
 
@@ -531,7 +556,7 @@ always @(posedge clk or negedge rstn) begin
             8'd9:   dout <= {trng_data_reg, trng_data_reg};  // 8位扩展为16位
             default:dout <= 16'h0;
         endcase 
-    else if(addr_hold_cnt==vio_t_AVAV-1)
+    else if(hold_before_one)
         case(vio_din_sel)
             8'd1:   dout <= addr_cnt[15:0];
             8'd2:   dout <= 16'hFFFF-addr_cnt[15:0];
@@ -681,7 +706,7 @@ always @(posedge clk or negedge rstn) begin
             4'd2: begin  // 写读
                 if(start_d2 == 0 && start_d1 == 1)
                     rd_en <= 1'b0;
-                else if(addr_cnt + 1 == vio_addr_num && addr_hold_cnt + 2 == vio_t_AVAV)
+                else if(addr_is_last && hold_before_two)
                     rd_en <= rd_en + 1;
                 else
                     rd_en <= rd_en;
