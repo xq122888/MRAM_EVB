@@ -20,7 +20,7 @@ module tb_top_detail;
   reg prior_stall=0;
   reg [465:0] prior_state;
   reg [21:0] reference_address=0;
-  wire [465:0] memory_state={dut.read_compare_valid,dut.read_compare_bank,dut.dq_read_data,dut.read_valid,dut.read_delay_0,dut.read_delay_1,dut.read_next_bank,dut.read_address_0,dut.read_address_1,dut.read_expected_0,dut.read_expected_1,dut.read_drain,dut.addr_compare_count,dut.dq_drive,dut.dq_write_data,dut.hold_release_count,dut.hold_sample_count,dut.dout_ref_addr,dut.addr,dut.addr_d,dut.addr_cnt,dut.addr_hold_cnt,
+  wire [465:0] memory_state={dut.read_compare_valid,dut.read_compare_bank,dut.read_valid,dut.read_delay_0,dut.read_delay_1,dut.read_next_bank,dut.read_address_0,dut.read_address_1,dut.read_expected_0,dut.read_expected_1,dut.read_drain,dut.addr_compare_count,dut.dq_drive,dut.dq_write_data,dut.hold_release_count,dut.hold_sample_count,dut.dout_ref_addr,dut.addr,dut.addr_d,dut.addr_cnt,dut.addr_hold_cnt,
     dut.rd_en,dut.rd_en_d,dut.rd_en_d2,dut.R_EN,dut.R_WN,dut.R_GN,dut.R_UBN,
     dut.R_LBN,dut.R_DQ,dut.dout,dut.dout_d1,dut.dout_d2,dut.dout_ref,
     dut.keep,dut.flg,dut.random_seed,dut.random_state};
@@ -59,6 +59,10 @@ module tb_top_detail;
     end
     #1;
     if(active && rst_n) begin
+      if({dut.R_EN,dut.R_WN,dut.R_GN,dut.R_UBN,dut.R_LBN}!==
+         {dut.debug_en,dut.debug_wn,dut.debug_gn,dut.debug_ubn,dut.debug_lbn} ||
+         dut.addr_d!==dut.debug_addr || dut.dq_write_data!==dut.debug_dq_write)
+        $fatal(1,"IOB/fabric copies diverged during detail pause or replacement");
       if(dut.addr_compare_count!==dut.addr_cnt) $fatal(1,"Address replica diverged during detail control");
       if(dut.hold_release_count!==dut.addr_hold_cnt || dut.hold_sample_count!==dut.addr_hold_cnt)
         $fatal(1,"Timer replicas diverged during detail/start/loop control");

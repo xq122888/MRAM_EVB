@@ -29,11 +29,48 @@ proc mram_collect_spi_timing {repo_root} {
     puts $metadata "Local period-counter replica registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *hold_release_count_reg* || NAME =~ *hold_sample_count_reg*}]]"
     puts $metadata "Local address-comparison replica registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *addr_compare_count_reg*}]]"
     puts $metadata "Unified MRAM IO cycle-origin nets in loaded design: [llength [get_nets -quiet -hierarchical -filter {NAME =~ *io_cycle_start}]]"
-    set mram_io_regs [get_cells -quiet -hierarchical -filter {NAME =~ *addr_d_reg* || NAME =~ *R_EN_reg || NAME =~ *R_WN_reg || NAME =~ *R_GN_reg || NAME =~ *R_UBN_reg || NAME =~ *R_LBN_reg || NAME =~ *dq_write_data_reg* || NAME =~ *dq_read_data_reg* || NAME =~ *dq_tristate_reg*}]
+    # Exclude combinational *_reg[...]_i_* cells (two CARRY4s were counted as
+    # registers in the 16:45 bundle). Count only actual FD* flip-flops.
+    set mram_io_regs [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && (NAME =~ *addr_d_reg* || NAME =~ *R_EN_reg || NAME =~ *R_WN_reg || NAME =~ *R_GN_reg || NAME =~ *R_UBN_reg || NAME =~ *R_LBN_reg || NAME =~ *dq_write_data_reg* || NAME =~ *dq_read_data_reg* || NAME =~ *dq_tristate_reg*)}]
     puts $metadata "MRAM IOB register candidates (expected 75): [llength $mram_io_regs]"
+    puts $metadata "Same-edge output fabric-copy registers (expected 43): [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && (NAME =~ *debug_addr_reg* || NAME =~ *debug_dq_write_reg* || NAME =~ *debug_en_reg || NAME =~ *debug_wn_reg || NAME =~ *debug_gn_reg || NAME =~ *debug_ubn_reg || NAME =~ *debug_lbn_reg)}]]"
     puts $metadata "Inspect LOC/BEL below; IOB=TRUE alone does not prove packing."
+    set placed_in_io 0
+    set placed_in_slice 0
     foreach io_reg $mram_io_regs {
-        puts $metadata "MRAM_IOB $io_reg REF=[get_property REF_NAME $io_reg] IOB=[get_property IOB $io_reg] LOC=[get_property LOC $io_reg] BEL=[get_property BEL $io_reg]"
+        set io_location [get_property LOC $io_reg]
+        if {[regexp {^(ILOGIC|OLOGIC|IOB)_} $io_location]} {incr placed_in_io}
+        if {[string match SLICE_* $io_location]} {incr placed_in_slice}
+        puts $metadata "MRAM_IOB $io_reg REF=[get_property REF_NAME $io_reg] IOB=[get_property IOB $io_reg] LOC=$io_location BEL=[get_property BEL $io_reg]"
+        set q_pins [get_pins -quiet -of_objects $io_reg -filter {REF_PIN_NAME == Q}]
+        set q_loads unavailable
+        if {[llength $q_pins] != 0} {
+            set q_nets [get_nets -quiet -of_objects $q_pins]
+            if {[llength $q_nets] != 0} {
+                set q_loads [get_pins -quiet -of_objects $q_nets -filter {DIRECTION == IN}]
+            }
+        }
+        puts $metadata "MRAM_IOB_Q_LOADS $io_reg $q_loads"
+    }
+    puts $metadata "MRAM registers placed in IO logic: $placed_in_io/[llength $mram_io_regs]; placed in SLICE: $placed_in_slice"
+    # Carry the packing diagnostics with the bundle instead of requesting a
+    # separate build log when a register still cannot pack in an IOB.
+    foreach run_name {synth_2 impl_2} {
+        set run [get_runs -quiet $run_name]
+        if {[llength $run] == 0} {continue}
+        set run_log [file join [get_property DIRECTORY $run] runme.log]
+        if {![file exists $run_log]} {continue}
+        puts $metadata "IO packing diagnostics from $run_log (up to 200 matching lines):"
+        set run_input [open $run_log r]
+        set matches 0
+        while {[gets $run_input log_line] >= 0} {
+            if {[regexp -nocase {IOB|IOLOGIC|pack.*reg|reg.*pack|cannot.*pack|prevent.*pack} $log_line]} {
+                puts $metadata $log_line
+                incr matches
+                if {$matches >= 200} {break}
+            }
+        }
+        close $run_input
     }
     puts $metadata "Qualified DQ capture comparison-stage registers: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *read_compare_valid_reg}]]"
     puts $metadata "Latched TRNG test-seed registers: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *random_test_seed_reg*}]]"

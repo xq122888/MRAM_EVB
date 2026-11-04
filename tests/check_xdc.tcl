@@ -39,7 +39,7 @@ proc mock_get_nets {args} {
     set nets [lindex $args 0]
     foreach net $nets {
         if {[string match *u_uart_protocol* $net]} {error "Stale UART debug net: $net"}
-        if {[regexp {^DQ_OBUF\[} $net]} {error "Removed DQ output alias: $net"}
+        if {[regexp {^(DQ|A|EN|WN|GN|UBN|LBN)_OBUF} $net]} {error "Direct MRAM output tap prevents isolated IOB output: $net"}
     }
     return $nets
 }
@@ -132,9 +132,17 @@ if {[lindex [dict get $connections u_ila_0/probe1] 0] ne {dq_read_data[0]} || [l
     error "DQ probe must observe the IOB input-register data"
 }
 for {set bit 0} {$bit < 16} {incr bit} {
-    if {[lindex [dict get $connections u_ila_0/probe4] $bit] ne [format {dq_write_data[%d]} $bit]} {
-        error "DQ output probe must observe all 16 registered output-data bits in order"
+    if {[lindex [dict get $connections u_ila_0/probe4] $bit] ne [format {debug_dq_write[%d]} $bit]} {
+        error "DQ output probe must observe all 16 same-edge fabric copy bits in order"
     }
+}
+for {set bit 0} {$bit < 22} {incr bit} {
+    if {[lindex [dict get $connections u_ila_0/probe2] $bit] ne [format {debug_addr[%d]} $bit]} {
+        error "Address probe must observe the same-edge fabric copy"
+    }
+}
+foreach {probe net} {9 debug_en 13 debug_gn 15 debug_lbn 30 debug_ubn 31 debug_wn} {
+    if {[dict get $connections u_ila_0/probe$probe] ne $net} {error "Control probe must observe a same-edge fabric copy"}
 }
 if {[dict get $connections u_ila_0/probe18] ne "spi_miso_OBUF"} {
     error "MISO probe must observe the actual protocol output"

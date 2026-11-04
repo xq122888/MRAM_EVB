@@ -57,6 +57,9 @@ module tb_mram_pins;
     end
     if(!rst_n || !checking) begin previous_flg=0;previous_write=0;end
     else begin
+      if({en,wn,gn,ub,lb}!=={dut.debug_en,dut.debug_wn,dut.debug_gn,dut.debug_ubn,dut.debug_lbn} ||
+         address!==dut.debug_addr || dut.dq_write_data!==dut.debug_dq_write)
+        $fatal(1,"IOB output and same-edge fabric copy diverged");
       if(dut.addr_compare_count!==dut.addr_cnt ||
          dut.hold_release_count!==dut.addr_hold_cnt || dut.hold_sample_count!==dut.addr_hold_cnt)
         $fatal(1,"Replicated counters diverged");
