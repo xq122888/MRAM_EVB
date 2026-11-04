@@ -294,7 +294,10 @@ assign count_equal_slice[0] = addr_cnt[6:0] == vio_addr_num[6:0];
 assign count_less_slice[1] = addr_cnt[13:7] < vio_addr_num[13:7];
 assign count_equal_slice[1] = addr_cnt[13:7] == vio_addr_num[13:7];
 assign count_less_slice[2] = addr_cnt[22:14] < {2'b0,vio_addr_num[20:14]};
-assign count_equal_slice[2] = addr_cnt[22:14] == {2'b0,vio_addr_num[20:14]};
+// The reported high-slice equality used a CARRY4 before address selection.
+// A three-group LUT equality keeps that reduction out of the carry chain.
+mram_equal_lut #(.WIDTH(9)) eq_count_high_slice(
+    .a(addr_cnt[22:14]),.b({2'b0,vio_addr_num[20:14]}),.match(count_equal_slice[2]));
 wire addr_count_less = count_less_slice[2] ||
                       (count_equal_slice[2] && count_less_slice[1]) ||
                       (count_equal_slice[2] && count_equal_slice[1] && count_less_slice[0]);
@@ -597,19 +600,18 @@ always @(posedge clk or negedge rstn) begin
 end
 
 //---
+// Time qualification is needed only by the CE. Choose clear/increment data
+// independently, so the period comparison need not also select every D bit.
+wire count_restart = (start_d1 != start_d2) || next_loop_start_d1;
+wire count_wrap = keep && addr_is_last;
+(* keep="true" *) wire count_update_enable = !detail_stall &&
+    (count_restart || (hold_before_two && (count_wrap || addr_count_less)));
+wire count_clear_data = count_restart || count_wrap;
 always @(posedge clk or negedge rstn) begin
-    if(!rstn)
-        addr_cnt <= 22'd0;
-    else if(detail_stall)
-        addr_cnt <= addr_cnt;
-    else if(start_d1 != start_d2 || next_loop_start_d1)   // Ôö¼Ó next_loop_start
-        addr_cnt <= 22'd0;
-    else if(keep && addr_is_last && hold_before_two)
-        addr_cnt <= 22'd0;
-    else if(addr_count_less && hold_before_two)
-        addr_cnt <= addr_cnt_inc;
-    else
-        addr_cnt <= addr_cnt;
+    if (!rstn)
+        addr_cnt <= 23'd0;
+    else if (count_update_enable)
+        addr_cnt <= count_clear_data ? 23'd0 : addr_cnt_inc;
 end
 
 
@@ -827,9 +829,8 @@ always @(posedge clk or negedge rstn) begin
         R_EN <= 1'b1;
     else if(detail_stall)
         R_EN <= R_EN;
-    else if(vio_t_EH2EL==0 && keep && !current_equals_address)
-        R_EN <= 1'b0;
-    else if(vio_t_EH2EL==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
+    else if(vio_t_EH2EL==0 &&
+            ((start_d2 && !start_d3) || (!current_equals_address && (keep || (|addr)))))
         R_EN <= 1'b0;
     else if(vio_t_EH2EL!=0 && hold_sample_count==vio_t_EH2EL)
         R_EN <= 1'b0;
