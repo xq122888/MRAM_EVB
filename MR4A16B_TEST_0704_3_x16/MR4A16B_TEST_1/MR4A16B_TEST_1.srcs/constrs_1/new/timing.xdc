@@ -10,5 +10,16 @@ create_clock -period 5.000 -name clk200m -waveform {0.000 2.500} -add [get_pins 
 #resize_pblock [get_pblocks pblock_ila_core_inst] -add {RAMB18_X0Y88:RAMB18_X0Y97}
 #resize_pblock [get_pblocks pblock_ila_core_inst] -add {RAMB36_X0Y44:RAMB36_X0Y48}
 
-# Random test data now uses synchronous PRNG logic on clk200m.
-# The old ring oscillator and its timing exceptions are no longer used.
+# Random test words use a synchronous PRNG, seeded from the physical entropy source.
+
+# Only the intentional physical RO loops are permitted. All entropy processing,
+# seed storage and PRNG logic retain normal clk200m setup/hold analysis.
+set seed_ro_nets [get_nets -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_bank*/ring*}]
+if {[llength $seed_ro_nets] != 0} {
+    set_property ALLOW_COMBINATORIAL_LOOPS true $seed_ro_nets
+}
+# Asynchronous physical entropy enters only the first synchronizer stage.
+set seed_meta_pins [get_pins -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_meta_reg*/D}]
+if {[llength $seed_meta_pins] != 0} {
+    set_false_path -to $seed_meta_pins
+}

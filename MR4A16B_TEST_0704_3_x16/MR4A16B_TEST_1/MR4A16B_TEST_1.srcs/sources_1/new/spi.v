@@ -90,6 +90,8 @@ module spi_protocol #(
     (*mark_debug="true"*)output reg tx_done_pulse,
     // Backpressure for the error-event producer; only summary frames ACK loops.
     output wire detail_stall,
+    input wire random_seed_ready,
+    output reg start_waiting,
     
     // 状态反馈输入
     input  wire [31:0] current_loop,
@@ -255,7 +257,6 @@ always @(posedge clk or negedge rst_n) begin
         rx_byte_cnt   <= 5'd0;
         calc_checksum <= 8'd0;
         checksum_ok   <= 1'b0;
-        start_test    <= 1'b0;
     end
     else begin
         if (timeout_detected) begin
@@ -267,7 +268,6 @@ always @(posedge clk or negedge rst_n) begin
         else if (spi_data_valid_d2) begin
             case (rx_state)
                 0: begin
-                    start_test    <= 1'b0;
                     if (spi_rx_data == FRAME_HEADER) begin
                         rx_state      <= 5'd1;
                         calc_checksum <= 8'h00;
@@ -294,9 +294,6 @@ always @(posedge clk or negedge rst_n) begin
                 end
                 
                 23: begin
-                    if (spi_rx_data == FRAME_TAIL && checksum_ok) begin
-                        start_test <= 1'b1; // 单周期脉冲，测试正式启动
-                    end
                     // 无论成功失败，恢复空闲态
                     rx_state      <= 5'd0;
                     calc_checksum <= 8'd0;
@@ -310,13 +307,25 @@ always @(posedge clk or negedge rst_n) begin
                 end
             endcase
         end
-        else begin
-            case (rx_state)
-                0: begin
-                    start_test    <= 1'b0;
-                  end
-            endcase
-         end
+    end
+end
+
+// A random-mode request waits for one complete fresh TRNG seed. Non-random
+// modes retain the original tail-to-start timing. Never use a constant fallback.
+wire valid_start_request = spi_data_valid_d2 && !timeout_detected &&
+    (rx_state==5'd23) && (spi_rx_data==FRAME_TAIL) && checksum_ok;
+wire start_permitted = (data_pattern!=8'd9) || random_seed_ready;
+wire starting_new_frame = spi_data_valid_d2 && (rx_state==0) &&
+    (spi_rx_data==FRAME_HEADER);
+always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin start_test<=0;start_waiting<=0;end
+    else begin
+        start_test<=0;
+        if(config_commit || timeout_detected || stop_test) start_waiting<=0;
+        else if((valid_start_request || start_waiting) && start_permitted &&
+                ((rx_state==0 && !starting_new_frame) || valid_start_request)) begin
+            start_test<=1;start_waiting<=0;
+        end else if(valid_start_request) start_waiting<=1;
     end
 end
 
@@ -607,9 +616,9 @@ reg        test_frame_acked;
 reg [3:0] report_start_guard;
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) report_start_guard <= 4'd0;
-    else report_start_guard <= {report_start_guard[2:0],start_test};
+    else report_start_guard <= {report_start_guard[2:0],(start_test || valid_start_request)};
 end
-wire report_restart = start_test || (|report_start_guard);
+wire report_restart = start_test || valid_start_request || (|report_start_guard);
 reg        detail_frame_acked;
 reg        detail_pending;
 reg [31:0] detail_loop;

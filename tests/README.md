@@ -1,7 +1,8 @@
 # SPI report regression
 
-The random-data repair and its replay/physical-pin regression are documented in
-[random-pattern.md](random-pattern.md); run `bash tests/run_random_pattern.sh`.
+The TRNG-seeded random-data repair and its digital replay regression are documented
+in [random-pattern.md](random-pattern.md). Run `bash tests/run_random_pattern.sh`
+and `bash tests/run_trng_seed.sh` for seed handling, conditioning and health checks.
 
 The 25-byte detailed-error reporting feature and its build/board checks are
 documented in [detailed-error-log.md](detailed-error-log.md). Run its additional

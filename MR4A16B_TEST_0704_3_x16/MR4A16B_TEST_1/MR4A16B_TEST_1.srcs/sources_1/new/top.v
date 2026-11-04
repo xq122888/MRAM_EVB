@@ -154,7 +154,12 @@ reg [15:0]  dout_d1;
 reg [15:0]  dout_d2;
 reg [15:0]  dout_ref;
 reg [21:0] dout_ref_addr;
-wire detail_stall;
+wire spi_detail_stall;
+(* mark_debug="true" *) wire random_seed_wait;
+wire detail_stall = spi_detail_stall || random_seed_wait;
+(* mark_debug="true" *) wire trng_seed_ready,trng_seed_fault;
+wire [31:0] trng_seed_data;
+(* mark_debug="true" *) reg [31:0] random_test_seed;
 reg [21:0] error_ref_addr_sample, error_current_addr_sample;
 reg [15:0] error_data_snapshot;
 reg [15:0] error_ref_sample, error_current_sample;
@@ -389,7 +394,9 @@ spi_protocol u_spi_protocol (
     .t_lbl2lbh_r(spi_t_lbl2lbh_r),
     .start_test(spi_start_test),
     .tx_done_pulse(send_frame_ack),
-    .detail_stall(detail_stall),
+    .detail_stall(spi_detail_stall),
+    .random_seed_ready(trng_seed_ready),
+    .start_waiting(random_seed_wait),
     
     // 给spi模块的参数
     .current_loop(loop_idx),
@@ -444,7 +451,15 @@ assign vio_t_LBL2LBH_r = spi_t_lbl2lbh_r;
 // ========== Reproducible pseudo-random test data ==========
 // Reproducible test data: xorshift32, never seeded with zero. The read
 // pass must replay the write pass, rather than sampling live entropy again.
-localparam [31:0] RANDOM_TEST_SEED = 32'h6d2b79f5;
+// Collect continuously from global reset, including while waiting for a
+// command or a seed. Mode changes must not reset the entropy source.
+mram_trng_seed u_seed_rng(.clk(clk),.rst_n(rst_n),
+    .take(spi_start_test && vio_din_sel==8'd9),.seed_data(trng_seed_data),
+    .seed_ready(trng_seed_ready),.health_fail(trng_seed_fault));
+always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) random_test_seed<=32'd1;
+    else if(spi_start_test && vio_din_sel==8'd9) random_test_seed<=trng_seed_data;
+end
 reg [31:0] random_seed;
 reg [31:0] random_state;
 function [31:0] random_next;
@@ -462,7 +477,7 @@ endfunction
 // loop index too. Cover both start edges so this is not a seed advance.
 wire random_new_test = (start_d1 != start_d2);
 wire random_read_restart = (vio_TMODE==4'd2) && rd_en && !rd_en_d;
-wire [31:0] random_begin_seed = random_new_test ? RANDOM_TEST_SEED : random_seed_next;
+wire [31:0] random_begin_seed = random_new_test ? random_test_seed : random_seed_next;
 wire random_x8 = (chip_type==8'h80) || (chip_type==8'h82);
 wire [15:0] random_begin_word = random_x8 ? {random_begin_seed[7:0],random_begin_seed[7:0]} : random_begin_seed[15:0];
 wire [15:0] random_seed_word = random_x8 ? {random_seed[7:0],random_seed[7:0]} : random_seed[15:0];
@@ -694,6 +709,10 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         flg <= 1'b0;
+    // A new random request aborts the preceding engine while awaiting a seed;
+    // cancellation must not resume the old producer with the new parameters.
+    else if(random_seed_wait)
+        flg <= 1'b0;
     else if(detail_stall)
         flg <= flg;
     else if((start_d2 != 0 && start_d2 != start_d3) || next_loop_start_d1)   // 增加 next_loop_start
@@ -790,8 +809,8 @@ end
 
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
-        random_seed <= RANDOM_TEST_SEED;
-        random_state <= RANDOM_TEST_SEED;
+        random_seed <= 32'd1;
+        random_state <= 32'd1;
     end else if (!detail_stall && vio_din_sel==8'd9) begin
         if (random_new_test || next_loop_start_d1) begin
             random_seed <= random_begin_seed;

@@ -11,6 +11,26 @@ module trng_8bit(input clk,rst_n,output [7:0] rnd_data,output rnd_valid);
   assign rnd_data=8'ha5;
   assign rnd_valid=rst_n;
 endmodule
+// Deterministic seed-source fixture for DIGITAL top-level tests only.
+// The production RO/synchronizer/conditioner is tested separately with injected
+// raw samples; neither fixture establishes physical entropy quality.
+module mram_trng_seed(input clk,rst_n,take,output reg [31:0] seed_data,
+                      output reg seed_ready,output wire health_fail);
+  reg [13:0] wait_cycles;
+  reg [31:0] next_value;
+  assign health_fail=1'b0;
+  always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin seed_data<=32'h6d2b79f5;seed_ready<=0;wait_cycles<=0;end
+    else if(take && seed_ready) begin
+      next_value=seed_data^(seed_data<<13);
+      next_value=next_value^(next_value>>17);
+      seed_data<=next_value^(next_value<<5);seed_ready<=0;wait_cycles<=0;
+    end else if(!seed_ready) begin
+      if(wait_cycles==14'd9999) seed_ready<=1;
+      else wait_cycles<=wait_cycles+1'b1;
+    end
+  end
+endmodule
 module tb_top_timing;
   reg clk=0,rst_n=0,start=0,ack=0;
   reg [3:0] mode=0;
