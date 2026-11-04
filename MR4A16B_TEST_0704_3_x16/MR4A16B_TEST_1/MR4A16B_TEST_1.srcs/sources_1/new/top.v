@@ -226,26 +226,26 @@ wire [15:0] spi_period_before_last_w, spi_period_before_last_r;
 (* keep = "true" *) wire [22:0] addr_cnt_inc = addr_cnt + 23'd1;
 (* keep = "true" *) wire [31:0] loop_idx_inc = loop_idx + 32'd1;
 (* keep = "true" *) wire [31:0] err_cnt_inc = err_cnt + 32'd1;
-// Compare each bank independently before selecting its one-bit result. KEEP
-// prevents folding this back into a wide bank mux ahead of the comparator.
-// Bound the equality logic to LUT groups; prevent Vivado from selecting
-// a serial CARRY reduction on the high-fanout runtime control predicates.
+// Include delayed read/write selection in each bank's high comparison group.
+// Leave the complete bank match unkept: the two low/high ANDs plus their OR
+// can then share one LUT, eliminating a bank mux AFTER the wide equality.
+// Group partial equalities remain kept to bound the wide comparison depth.
 wire hold_one_w_equal, hold_one_r_equal, hold_two_w_equal, hold_two_r_equal;
-mram_equal_lut #(.WIDTH(22)) eq_hold_one_w(.a({1'b0,addr_hold_cnt}),.b({!spi_period_has_one_w,5'b0,spi_period_last_w}),.match(hold_one_w_equal));
-mram_equal_lut #(.WIDTH(22)) eq_hold_one_r(.a({1'b0,addr_hold_cnt}),.b({!spi_period_has_one_r,5'b0,spi_period_last_r}),.match(hold_one_r_equal));
-mram_equal_lut #(.WIDTH(22)) eq_hold_two_w(.a({1'b0,addr_hold_cnt}),.b({!spi_period_has_two_w,5'b0,spi_period_before_last_w}),.match(hold_two_w_equal));
-mram_equal_lut #(.WIDTH(22)) eq_hold_two_r(.a({1'b0,addr_hold_cnt}),.b({!spi_period_has_two_r,5'b0,spi_period_before_last_r}),.match(hold_two_r_equal));
-(* keep = "true" *) wire hold_one_w = hold_one_w_equal;
-(* keep = "true" *) wire hold_one_r = hold_one_r_equal;
-(* keep = "true" *) wire hold_two_w = hold_two_w_equal;
-(* keep = "true" *) wire hold_two_r = hold_two_r_equal;
-wire hold_before_one = rd_en_d2 ? hold_one_r : hold_one_w;
-wire hold_before_two = rd_en_d2 ? hold_two_r : hold_two_w;
-(* keep = "true" *) wire period_w_match;
-mram_equal_lut eq_period_w(.a(addr_hold_cnt),.b({5'b0,spi_t_avav_w}),.match(period_w_match));
-(* keep = "true" *) wire period_r_match;
-mram_equal_lut eq_period_r(.a(addr_hold_cnt),.b({5'b0,spi_t_avav_r}),.match(period_r_match));
-wire period_match = rd_en_d2 ? period_r_match : period_w_match;
+mram_equal_lut #(.WIDTH(23)) eq_hold_one_w(.a({rd_en_d2,1'b0,addr_hold_cnt}),.b({1'b0,!spi_period_has_one_w,5'b0,spi_period_last_w}),.match(hold_one_w_equal));
+mram_equal_lut #(.WIDTH(23)) eq_hold_one_r(.a({rd_en_d2,1'b0,addr_hold_cnt}),.b({1'b1,!spi_period_has_one_r,5'b0,spi_period_last_r}),.match(hold_one_r_equal));
+mram_equal_lut #(.WIDTH(23)) eq_hold_two_w(.a({rd_en_d2,1'b0,addr_hold_cnt}),.b({1'b0,!spi_period_has_two_w,5'b0,spi_period_before_last_w}),.match(hold_two_w_equal));
+mram_equal_lut #(.WIDTH(23)) eq_hold_two_r(.a({rd_en_d2,1'b0,addr_hold_cnt}),.b({1'b1,!spi_period_has_two_r,5'b0,spi_period_before_last_r}),.match(hold_two_r_equal));
+wire hold_one_w = hold_one_w_equal;
+wire hold_one_r = hold_one_r_equal;
+wire hold_two_w = hold_two_w_equal;
+wire hold_two_r = hold_two_r_equal;
+wire hold_before_one = hold_one_r || hold_one_w;
+wire hold_before_two = hold_two_r || hold_two_w;
+wire period_w_match;
+mram_equal_lut #(.WIDTH(22)) eq_period_w(.a({rd_en_d2,addr_hold_cnt}),.b({1'b0,5'b0,spi_t_avav_w}),.match(period_w_match));
+wire period_r_match;
+mram_equal_lut #(.WIDTH(22)) eq_period_r(.a({rd_en_d2,addr_hold_cnt}),.b({1'b1,5'b0,spi_t_avav_r}),.match(period_r_match));
+wire period_match = period_r_match || period_w_match;
 (* keep = "true" *) wire early_w_match;
 mram_equal_lut eq_early_w(.a(hold_sample_count),.b(spi_compare_early_w),.match(early_w_match));
 (* keep = "true" *) wire early_r_match;
