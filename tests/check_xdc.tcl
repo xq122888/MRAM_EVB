@@ -127,6 +127,9 @@ if {$loop_count != 45 || $meta_count != 5 || $hub_frequency != 200000000 ||
     [llength [dict keys $ports u_ila_0/probe*]] != 32} {
     error "Incomplete timing/debug configuration"
 }
+if {[lindex [dict get $connections u_ila_0/probe1] 0] ne {dq_read_data[0]} || [lindex [dict get $connections u_ila_0/probe1] 15] ne {dq_read_data[15]}} {
+    error "DQ probe must observe the IOB input-register data"
+}
 if {[dict get $connections u_ila_0/probe18] ne "spi_miso_OBUF"} {
     error "MISO probe must observe the actual protocol output"
 }

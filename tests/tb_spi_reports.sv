@@ -114,7 +114,7 @@ module tb_spi_reports;
           $fatal(1,"Bad checksum changed the committed configuration");
       end else if(dut.test_mode!==mode || dut.test_length!==config_length ||
                   dut.loop_count!==config_loops || dut.write_mode!==config_write_mode ||
-                  dut.read_mode!==config_read_mode || dut.t_avav_r!=={8'b0,config_period} ||
+                  dut.read_mode!==config_read_mode || dut.t_avav_r!==((config_read_mode==1 && config_period<8)?16'd8:{8'b0,config_period}) ||
                   dut.t_avav_w!==((config_write_mode==3)?16'd10:{8'b0,config_period}))
         $fatal(1,"Configuration RX failed mode=%d length=%d",dut.test_mode,dut.test_length);
     end

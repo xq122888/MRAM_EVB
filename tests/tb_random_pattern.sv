@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 // Digital replay test. Writes are captured from actual A/DQ/WN pins. During
-// the read pass an ideal bus supplies stored words with 40 ns address latency.
+// the read pass an ideal bus supplies stored words with 35 ns address latency (5 ns before Read1 capture).
 // CE/OE analogue behaviour and physical MRAM timing are not modelled.
 module tb_random_pattern;
   reg clk=0,rst_n=0,sclk=0,cs_n=1,mosi=0,active=0;
@@ -47,8 +47,8 @@ module tb_random_pattern;
   end
   always @(address or memory_changed) begin
     if(address>=BASE && address<BASE+length_cfg)
-      read_value <= #40 (memory[address-BASE] ^ ((fault_cfg && address==BASE+2)?16'd1:16'd0));
-    else read_value <= #40 16'd0;
+      read_value <= #35 (memory[address-BASE] ^ ((fault_cfg && address==BASE+2)?16'd1:16'd0));
+    else read_value <= #35 16'd0;
   end
   always @(posedge clk) begin
     if(active && rst_n) begin
@@ -64,14 +64,9 @@ module tb_random_pattern;
         granted_seed=dut.trng_seed_data;seeds_taken=seeds_taken+1;
         if(granted_seed!==vectors[seed_base]) $fatal(1,"Test reused the previous fixture seed");
       end
-      if(!dut.detail_stall && dut.flg && dut.rd_en_d &&
-         !dut.spi_start_test && dut.start_d1==dut.start_d2 && !dut.next_loop_start_d1) begin
-        comparison_address=0;
-        if(dut.addr_hold_cnt==dut.vio_t_AVQV-dut.vio_t_AVAV && dut.addr_d!=dut.vio_addr_ini) begin
-          comparison_address=dut.dout_ref_addr;comparison_word=dut.dout_ref;
-        end else if(dut.addr_hold_cnt==dut.vio_t_AVQV) begin
-          comparison_address=dut.addr_d;comparison_word=dut.dout_d1;
-        end
+      if(!dut.detail_stall && !dut.read_pipeline_flush && dut.read_sample_valid) begin
+        comparison_address=dut.read_due_0?dut.read_address_0:dut.read_address_1;
+        comparison_word=dut.read_due_0?dut.read_expected_0:dut.read_expected_1;
         if(comparison_address>=BASE && comparison_address<BASE+length_cfg) begin
           if(comparison_word!==golden(dut.loop_idx,comparison_address-BASE))
             $fatal(1,"Read expected word failed to replay written sequence addr=%h got=%h",comparison_address,comparison_word);
@@ -100,7 +95,7 @@ module tb_random_pattern;
       cfg[0]=8'h55;cfg[1]=chip_cfg;cfg[2]=2;cfg[3]=9;
       cfg[4]=BASE[7:0];cfg[5]=BASE[15:8];cfg[6]=BASE[21:16];
       cfg[8]=length_cfg[7:0];cfg[9]=length_cfg[15:8];cfg[12]=2;
-      cfg[16]=period_cfg;cfg[17]=1;cfg[18]=1;cfg[19]=detail_cfg;
+      cfg[16]=period_cfg;cfg[17]=1;cfg[18]=(case_no==1 || case_no==6)?0:1;cfg[19]=detail_cfg;
       checksum=0;for(i=1;i<=21;i=i+1) checksum=checksum+cfg[i];
       cfg[22]=checksum;cfg[23]=8'haa;
       cs_n=0;#100;for(i=0;i<24;i=i+1) byte_io(cfg[i],unused);#100;cs_n=1;#200;

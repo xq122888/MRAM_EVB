@@ -29,6 +29,13 @@ proc mram_collect_spi_timing {repo_root} {
     puts $metadata "Local period-counter replica registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *hold_release_count_reg* || NAME =~ *hold_sample_count_reg*}]]"
     puts $metadata "Local address-comparison replica registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *addr_compare_count_reg*}]]"
     puts $metadata "Unified MRAM IO cycle-origin nets in loaded design: [llength [get_nets -quiet -hierarchical -filter {NAME =~ *io_cycle_start}]]"
+    set mram_io_regs [get_cells -quiet -hierarchical -filter {NAME =~ *addr_d_reg* || NAME =~ *R_EN_reg || NAME =~ *R_WN_reg || NAME =~ *R_GN_reg || NAME =~ *R_UBN_reg || NAME =~ *R_LBN_reg || NAME =~ *dq_write_data_reg* || NAME =~ *dq_read_data_reg* || NAME =~ *dq_tristate_reg*}]
+    puts $metadata "MRAM IOB register candidates (expected 75): [llength $mram_io_regs]"
+    puts $metadata "Inspect LOC/BEL below; IOB=TRUE alone does not prove packing."
+    foreach io_reg $mram_io_regs {
+        puts $metadata "MRAM_IOB $io_reg REF=[get_property REF_NAME $io_reg] IOB=[get_property IOB $io_reg] LOC=[get_property LOC $io_reg] BEL=[get_property BEL $io_reg]"
+    }
+    puts $metadata "Qualified DQ capture comparison-stage registers: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *read_compare_valid_reg}]]"
     puts $metadata "Latched TRNG test-seed registers: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *random_test_seed_reg*}]]"
     puts $metadata "Physical RO loop nets matched: [llength [get_nets -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_bank*/ring*}]]"
     set ro_nets [get_nets -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_bank*/ring*}]

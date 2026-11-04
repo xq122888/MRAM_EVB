@@ -18,7 +18,7 @@ connect_debug_port u_ila_0/probe0 [get_nets [list {loop_idx[0]} {loop_idx[1]} {l
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe1]
 set_property port_width 16 [get_debug_ports u_ila_0/probe1]
-connect_debug_port u_ila_0/probe1 [get_nets [list {RD_DATA[0]} {RD_DATA[1]} {RD_DATA[2]} {RD_DATA[3]} {RD_DATA[4]} {RD_DATA[5]} {RD_DATA[6]} {RD_DATA[7]} {RD_DATA[8]} {RD_DATA[9]} {RD_DATA[10]} {RD_DATA[11]} {RD_DATA[12]} {RD_DATA[13]} {RD_DATA[14]} {RD_DATA[15]}]]
+connect_debug_port u_ila_0/probe1 [get_nets [list {dq_read_data[0]} {dq_read_data[1]} {dq_read_data[2]} {dq_read_data[3]} {dq_read_data[4]} {dq_read_data[5]} {dq_read_data[6]} {dq_read_data[7]} {dq_read_data[8]} {dq_read_data[9]} {dq_read_data[10]} {dq_read_data[11]} {dq_read_data[12]} {dq_read_data[13]} {dq_read_data[14]} {dq_read_data[15]}]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe2]
 set_property port_width 22 [get_debug_ports u_ila_0/probe2]

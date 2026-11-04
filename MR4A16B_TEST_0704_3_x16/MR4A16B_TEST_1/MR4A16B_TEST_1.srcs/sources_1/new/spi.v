@@ -389,16 +389,20 @@ end
 // later, so all parameters are committed before start_test is asserted.
 // These are the same period/GL2GH values selected by the existing mode cases.
 wire [15:0] commit_write_period = (write_mode_reg == 2'b11) ? 16'd10 : t_avav_reg;
+// Read2 has a 40 ns minimum; write timing retains the requested period.
+wire [15:0] commit_read_period = (read_mode_reg==2'b01 && t_avav_reg<16'd8) ? 16'd8 : t_avav_reg;
+wire [15:0] commit_read_sample = (read_mode_reg==2'b01) ? 16'd9 : 16'd8;
 // Exact post-mode offsets, including the 16-bit x8 period+1 wrap.
 // These decode once per configuration, outside the running MRAM control paths.
-wire [15:0] commit_en_offset_w = (write_mode_reg == 2'b01 || write_mode_reg == 2'b10) ? 16'd1 : 16'd3;
-wire [15:0] commit_wn_offset = (write_mode_reg == 2'b10) ? 16'd1 : 16'd2;
-wire [15:0] commit_bn_offset_w = (write_mode_reg == 2'b00) ? 16'd3 : 16'd2;
+wire [15:0] commit_en_offset_w = (write_mode_reg == 2'b00 || write_mode_reg == 2'b11) ? 16'd3 : 16'd2;
+wire [15:0] commit_wn_offset = (write_mode_reg == 2'b01) ? 16'd3 : 16'd2;
+wire [15:0] commit_bn_offset_w = (write_mode_reg == 2'b10) ? 16'd3 : 16'd2;
 wire commit_x8 = (chip_type_reg == 8'h80) || (chip_type_reg == 8'h82);
 wire [15:0] commit_x8_offset = t_avav_reg + 16'd1;
-wire [15:0] commit_en_offset_r = (read_mode_reg == 2'b01) ? 16'd0 : t_avav_reg;
+wire [15:0] commit_en_offset_r = (read_mode_reg == 2'b01) ? 16'd0 : commit_read_period;
+wire [15:0] commit_x8_offset_r = commit_read_period + 16'd1;
 wire [15:0] commit_bn_w = commit_x8 ? commit_x8_offset : commit_bn_offset_w;
-wire [15:0] commit_bn_r = commit_x8 ? commit_x8_offset : commit_en_offset_r;
+wire [15:0] commit_bn_r = commit_x8 ? commit_x8_offset_r : commit_en_offset_r;
 reg config_commit;
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n)
@@ -422,10 +426,10 @@ always @(posedge clk or negedge rst_n) begin
         period_before_last_w <= 16'd8;
         period_last_r <= 16'd9;
         period_before_last_r <= 16'd8;
-        gn_release_w <= 21'd8;
+        gn_release_w <= 21'd10;
         gn_release_r <= 21'd0;
-        compare_early_w <= 21'h1fffff;
-        compare_early_r <= 21'h1fffff;
+        compare_early_w <= 21'h1ffffe;
+        compare_early_r <= 21'h1ffffe;
         en_release_w <= 21'd7;
         en_release_r <= 21'd0;
         wn_release_w <= 21'd8;
@@ -447,14 +451,14 @@ always @(posedge clk or negedge rst_n) begin
         t_avav_w       <= 16'd10;       
 		t_avqv_w       <= 16'd9;
         t_av2dv_w      <= 0; 
-		t_eh2el_w <= 3; t_el2eh_w <= 3;
-        t_wh2wl_w <= 1; t_wl2wh_w <= 2; 
-		t_gh2gl_w <= 1; t_gl2gh_w <= 2;
-        t_ubh2ubl_w <= 1; t_ubl2ubh_w <= 2; 
-		t_lbh2lbl_w <= 1; t_lbl2lbh_w <= 2;
+		t_eh2el_w <= 1; t_el2eh_w <= 3;
+        t_wh2wl_w <= 0; t_wl2wh_w <= 2;
+		t_gh2gl_w <= 10; t_gl2gh_w <= 0;
+        t_ubh2ubl_w <= 0; t_ubl2ubh_w <= 2;
+		t_lbh2lbl_w <= 0; t_lbl2lbh_w <= 2;
         // 读时序默认  50ns
         t_avav_r       <= 16'd10;       
-		t_avqv_r       <= 16'd9;
+		t_avqv_r       <= 16'd8;
         t_av2dv_r      <= 0; 
 		t_eh2el_r <= 0; t_el2eh_r <= 10;
         t_wh2wl_r <= 0; t_wl2wh_r <= 10; 
@@ -476,67 +480,58 @@ always @(posedge clk or negedge rst_n) begin
         // (mode 1) or the entire period (all other modes). Both operands use
         // rd_en_d2 in top.v. Reset values above preserve the initial 10-2/10-10.
         gn_release_w <= {5'b0,commit_write_period};
-        gn_release_r <= (read_mode_reg == 2'b01) ? {5'b0,t_avav_reg} : 21'd0;
-        compare_early_w <= 21'd9 - {5'b0,commit_write_period};
-        compare_early_r <= 21'd9 - {5'b0,t_avav_reg};
+        gn_release_r <= (read_mode_reg == 2'b01) ? {5'b0,commit_read_period} : 21'd0;
+        compare_early_w <= {5'b0,commit_read_sample} - {5'b0,commit_write_period};
+        compare_early_r <= {5'b0,commit_read_sample} - {5'b0,commit_read_period};
         en_release_w <= {5'b0,commit_write_period} - {5'b0,commit_en_offset_w};
-        en_release_r <= {5'b0,t_avav_reg} - {5'b0,commit_en_offset_r};
+        en_release_r <= {5'b0,commit_read_period} - {5'b0,commit_en_offset_r};
         wn_release_w <= {5'b0,commit_write_period} - {5'b0,commit_wn_offset};
-        wn_release_r <= {5'b0,t_avav_reg} - {5'b0,commit_wn_offset};
+        wn_release_r <= {5'b0,commit_read_period} - {5'b0,commit_wn_offset};
         ub_release_w <= {5'b0,commit_write_period} - {5'b0,commit_bn_w};
-        ub_release_r <= {5'b0,t_avav_reg} - {5'b0,commit_bn_r};
+        ub_release_r <= {5'b0,commit_read_period} - {5'b0,commit_bn_r};
         lb_release_w <= {5'b0,commit_write_period} - {5'b0,commit_bn_w};
-        lb_release_r <= {5'b0,t_avav_reg} - {5'b0,commit_bn_r};
-        period_last_r <= t_avav_reg - 16'd1;
-        period_before_last_r <= t_avav_reg - 16'd2;
+        lb_release_r <= {5'b0,commit_read_period} - {5'b0,commit_bn_r};
+        period_last_r <= commit_read_period - 16'd1;
+        period_before_last_r <= commit_read_period - 16'd2;
         // Invalid write_mode uses the existing 10-cycle fallback below.
         period_last_w <= (write_mode_reg == 2'b11) ? 16'd9 : (t_avav_reg - 16'd1);
         period_before_last_w <= (write_mode_reg == 2'b11) ? 16'd8 : (t_avav_reg - 16'd2);
         write_mode       <= write_mode_reg;
         read_mode        <= read_mode_reg;
         t_avav_w         <= t_avav_reg;
-        t_avav_r         <= t_avav_reg;
+        t_avav_r         <= commit_read_period;
         err_detail_print <= err_detail_print_reg;
         detail_enabled <= (t_mode_reg == 4'd2) && (err_detail_print_reg == 8'd1);
         period_has_one_w <= (commit_write_period >= 16'd1);
-        period_has_one_r <= (t_avav_reg >= 16'd1);
+        period_has_one_r <= (commit_read_period >= 16'd1);
         period_has_two_w <= (commit_write_period >= 16'd2);
-        period_has_two_r <= (t_avav_reg >= 16'd2);
+        period_has_two_r <= (commit_read_period >= 16'd2);
         t_avqv_w         <= 16'd9;
-        t_avqv_r         <= 16'd9;
+        t_avqv_r         <= commit_read_sample;
  
         // ---------- 写模式时序参数解码 ----------
         case (write_mode_reg)
-             2'b00: begin   // CEN GH
+            2'b01: begin // WE-controlled: CE/BN at 0, WE at 1; release WE P-3.
                 t_av2dv_w <= 0;
-                t_eh2el_w <= 1; t_el2eh_w <= 3; 
-				t_wh2wl_w <= 0; t_wl2wh_w <= 2;
-                t_gh2gl_w <= t_avav_reg; t_gl2gh_w <= 0;
-                t_ubh2ubl_w <= 1; t_ubl2ubh_w <= 3;
-                t_lbh2lbl_w <= 1; t_lbl2lbh_w <= 3;
-            end
-            2'b01: begin // WEN
-                t_av2dv_w <= 0;
-                t_eh2el_w <= 1; t_el2eh_w <= 1; 
-				t_wh2wl_w <= 2; t_wl2wh_w <= 2;
+                t_eh2el_w <= 0; t_el2eh_w <= 2;
+                t_wh2wl_w <= 1; t_wl2wh_w <= 3;
                 t_gh2gl_w <= t_avav_reg; t_gl2gh_w <= 0;
                 t_ubh2ubl_w <= 0; t_ubl2ubh_w <= 2;
                 t_lbh2lbl_w <= 0; t_lbl2lbh_w <= 2;
             end
-            2'b10: begin  // BN
+            2'b10: begin // Byte-controlled: CE/WE at 0, BN at 1; release BN P-3.
                 t_av2dv_w <= 0;
-                t_eh2el_w <= 1; t_el2eh_w <= 1; 
-				t_wh2wl_w <= 1; t_wl2wh_w <= 1;
+                t_eh2el_w <= 0; t_el2eh_w <= 2;
+                t_wh2wl_w <= 0; t_wl2wh_w <= 2;
                 t_gh2gl_w <= t_avav_reg; t_gl2gh_w <= 0;
-                t_ubh2ubl_w <= 2; t_ubl2ubh_w <= 2;
-                t_lbh2lbl_w <= 2; t_lbl2lbh_w <= 2;
+                t_ubh2ubl_w <= 1; t_ubl2ubh_w <= 3;
+                t_lbh2lbl_w <= 1; t_lbl2lbh_w <= 3;
             end
-            default: begin
-                t_avav_w  <= 16'd10;       
-                t_avqv_w  <= 16'd9;
+            default: begin // CE-controlled, including the legacy invalid-mode fallback.
+                if(write_mode_reg==2'b11) t_avav_w <= 16'd10;
                 t_av2dv_w <= 0;
-                t_eh2el_w <= 1; t_el2eh_w <= 3; 
-				t_wh2wl_w <= 0; t_wl2wh_w <= 2;
+                t_eh2el_w <= 1; t_el2eh_w <= 3;
+                t_wh2wl_w <= 0; t_wl2wh_w <= 2;
                 t_gh2gl_w <= t_avav_reg; t_gl2gh_w <= 0;
                 t_ubh2ubl_w <= 0; t_ubl2ubh_w <= 2;
                 t_lbh2lbl_w <= 0; t_lbl2lbh_w <= 2;
@@ -545,30 +540,21 @@ always @(posedge clk or negedge rst_n) begin
 
         // ---------- 读模式时序参数解码 ----------
         case (read_mode_reg)
-            2'b00: begin  // Read Cycle1
+            2'b01: begin // Read2: all enables fall at +5 ns, rise at period end.
                 t_av2dv_r <= 0;
-                t_eh2el_r <= 0; t_el2eh_r <= t_avav_reg;
-                t_wh2wl_r <= 0; t_wl2wh_r <= t_avav_reg;
-                t_gh2gl_r <= 0; t_gl2gh_r <= t_avav_reg;
-                t_ubh2ubl_r <= 0; t_ubl2ubh_r <= t_avav_reg;
-                t_lbh2lbl_r <= 0; t_lbl2lbh_r <= t_avav_reg;
-            end
-            2'b01: begin  // Read Cycle2
-                t_avqv_r  <= 9;
-                t_av2dv_r <= 0;
-                t_eh2el_r <= 1; t_el2eh_r <= 0; 
-				t_wh2wl_r <= 0; t_wl2wh_r <= t_avav_reg + 1;
-                t_gh2gl_r <= 2; t_gl2gh_r <= 0;
+                t_eh2el_r <= 1; t_el2eh_r <= 0;
+                t_wh2wl_r <= 0; t_wl2wh_r <= commit_read_period;
+                t_gh2gl_r <= 1; t_gl2gh_r <= 0;
                 t_ubh2ubl_r <= 1; t_ubl2ubh_r <= 0;
                 t_lbh2lbl_r <= 1; t_lbl2lbh_r <= 0;
             end
-            default: begin
+            default: begin // Read1: address-controlled, all enables stay low.
                 t_av2dv_r <= 0;
-                t_eh2el_r <= 0; t_el2eh_r <= t_avav_reg; 
-				t_wh2wl_r <= 0; t_wl2wh_r <= t_avav_reg;
-                t_gh2gl_r <= 0; t_gl2gh_r <= t_avav_reg;
-                t_ubh2ubl_r <= 0; t_ubl2ubh_r <= t_avav_reg;
-                t_lbh2lbl_r <= 0; t_lbl2lbh_r <= t_avav_reg;
+                t_eh2el_r <= 0; t_el2eh_r <= commit_read_period;
+                t_wh2wl_r <= 0; t_wl2wh_r <= commit_read_period;
+                t_gh2gl_r <= 0; t_gl2gh_r <= commit_read_period;
+                t_ubh2ubl_r <= 0; t_ubl2ubh_r <= commit_read_period;
+                t_lbh2lbl_r <= 0; t_lbl2lbh_r <= commit_read_period;
             end
         endcase
 
@@ -576,8 +562,8 @@ always @(posedge clk or negedge rst_n) begin
         if (chip_type_reg == 8'b10000000 || chip_type_reg == 8'b10000010) begin
             t_ubh2ubl_w <= 0; t_ubl2ubh_w <= t_avav_reg + 1;
             t_lbh2lbl_w <= 0; t_lbl2lbh_w <= t_avav_reg + 1;
-            t_ubh2ubl_r <= 0; t_ubl2ubh_r <= t_avav_reg + 1;
-            t_lbh2lbl_r <= 0; t_lbl2lbh_r <= t_avav_reg + 1;
+            t_ubh2ubl_r <= 0; t_ubl2ubh_r <= commit_read_period + 1;
+            t_lbh2lbl_r <= 0; t_lbl2lbh_r <= commit_read_period + 1;
         end
     end
 end

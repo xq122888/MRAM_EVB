@@ -16,10 +16,11 @@ module tb_top_detail;
   reg [21:0] captured_address;
   reg [15:0] captured_expected;
   integer captured_loop,captured_index;
+  integer read_seen[0:1];
   reg prior_stall=0;
-  reg [360:0] prior_state;
+  reg [465:0] prior_state;
   reg [21:0] reference_address=0;
-  wire [360:0] memory_state={dut.addr_compare_count,dut.dq_drive,dut.dq_write_data,dut.hold_release_count,dut.hold_sample_count,dut.dout_ref_addr,dut.addr,dut.addr_d,dut.addr_cnt,dut.addr_hold_cnt,
+  wire [465:0] memory_state={dut.read_compare_valid,dut.read_compare_bank,dut.dq_read_data,dut.read_valid,dut.read_delay_0,dut.read_delay_1,dut.read_next_bank,dut.read_address_0,dut.read_address_1,dut.read_expected_0,dut.read_expected_1,dut.read_drain,dut.addr_compare_count,dut.dq_drive,dut.dq_write_data,dut.hold_release_count,dut.hold_sample_count,dut.dout_ref_addr,dut.addr,dut.addr_d,dut.addr_cnt,dut.addr_hold_cnt,
     dut.rd_en,dut.rd_en_d,dut.rd_en_d2,dut.R_EN,dut.R_WN,dut.R_GN,dut.R_UBN,
     dut.R_LBN,dut.R_DQ,dut.dout,dut.dout_d1,dut.dout_d2,dut.dout_ref,
     dut.keep,dut.flg,dut.random_seed,dut.random_state};
@@ -28,8 +29,6 @@ module tb_top_detail;
     .spi_mosi(mosi),.spi_miso(miso));
   initial begin
     force dut.RD_DATA=injected_data;
-    force dut.dout_ref=16'hcafe;
-    force dut.dout_d1=16'h1234;
   end
   always @(posedge clk) begin
     detected=0;
@@ -40,14 +39,12 @@ module tb_top_detail;
       if(dut.send_frame_ack) acks=acks+1;
       if(dut.u_spi_protocol.detail_pending && dut.err_flg)
         $fatal(1,"Producer violated single-entry mailbox backpressure");
-      if((!enable_detail || (!dut.spi_start_test && dut.start_d1==dut.start_d2 && !dut.next_loop_start_d1)) &&
-         !dut.detail_stall && dut.flg && dut.rd_en_d) begin
-        if(dut.addr_hold_cnt==dut.vio_t_AVQV-dut.vio_t_AVAV &&
-           dut.addr_d!=dut.vio_addr_ini && dut.RD_DATA!=dut.dout_ref) begin
-          detected=1;captured_expected=dut.dout_ref;captured_address=reference_address;
-        end else if(dut.addr_hold_cnt==dut.vio_t_AVQV && dut.RD_DATA!=dut.dout_d1) begin
-          detected=1;captured_expected=dut.dout_d1;captured_address=dut.addr_d;
-        end
+      if(!dut.detail_stall && !dut.read_pipeline_flush && dut.read_compare_valid) begin
+        captured_address=configured_start+read_seen[dut.loop_idx];
+        captured_expected=16'd0;
+        read_seen[dut.loop_idx]=read_seen[dut.loop_idx]+1;
+        if(read_seen[dut.loop_idx]>4) $fatal(1,"Duplicate read sample");
+        detected=(injected_data!=16'd0);
       end
       if(detected) begin
         captured_loop=dut.loop_idx;
@@ -67,7 +64,7 @@ module tb_top_detail;
         $fatal(1,"Timer replicas diverged during detail/start/loop control");
       if(detected && (dut.error_addr_snapshot!==captured_address ||
          dut.error_data_snapshot!==injected_data || dut.error_expected_snapshot!==captured_expected))
-        $fatal(1,"Compare-edge snapshot used wrong operands");
+        $fatal(1,"Compare-edge snapshot used wrong operands case=%0d loop=%0d seen=%0d A=%h expectedA=%h value=%h expected=%h",case_no,dut.loop_idx,read_seen[dut.loop_idx],dut.error_addr_snapshot,captured_address,dut.error_data_snapshot,dut.error_expected_snapshot);
       if(dut.loop_idx>acks) $fatal(1,"Loop advanced without summary ACK");
       if(!enable_detail && dut.detail_stall) $fatal(1,"Disabled logging stalled MRAM");
       if(prior_stall && dut.detail_stall && memory_state!==prior_state)
@@ -113,11 +110,11 @@ module tb_top_detail;
   initial begin
     for(case_no=0;case_no<6;case_no=case_no+1) begin
       active=0;rst_n=0;cs_n=1;sclk=0;#30;
-      produced[0]=0;produced[1]=0;received_details[0]=0;received_details[1]=0;
+      produced[0]=0;produced[1]=0;received_details[0]=0;received_details[1]=0;read_seen[0]=0;read_seen[1]=0;
       acks=0;summaries=0;pauses=0;aborted=0;polls=0;
       enable_detail=(case_no!=2);faults=(case_no<3 || case_no==5);
       period_cfg=(case_no==0 || case_no==2 || case_no==4)?7:10;
-      injected_data=faults?16'hbeef:((period_cfg==7)?16'hcafe:16'h1234);
+      injected_data=faults?16'hbeef:16'd0;
       configured_start=22'h12000;
       @(negedge clk);rst_n=1;active=1;#100;configure;
       if(case_no==5) begin
@@ -129,7 +126,7 @@ module tb_top_detail;
           begin configure;end
           begin
             wait(dut.spi_start_test===1'b1);@(negedge clk);
-            produced[0]=0;produced[1]=0;received_details[0]=0;received_details[1]=0;
+            produced[0]=0;produced[1]=0;received_details[0]=0;received_details[1]=0;read_seen[0]=0;read_seen[1]=0;
             acks=0;summaries=0;pauses=0;aborted=0;polls=0;active=1;
           end
         join

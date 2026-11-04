@@ -136,19 +136,24 @@ wire        rstn            ;
 wire        vio_CMOS_SW     ;
 reg [3:0]   vio_TMODE_D1    ;
 reg [3:0]   vio_TMODE_D2    ;
-reg         R_EN;
-reg         R_WN;
-reg         R_GN;
-reg         R_UBN;
-reg         R_LBN;
-// Explicit output data and a single registered direction bit. Keep Z at
-// the I/O boundary instead of using 16 conditional Z-valued data registers.
-reg [15:0] dq_write_data;
+(* IOB="true", dont_touch="true" *) reg R_EN;
+(* IOB="true", dont_touch="true" *) reg R_WN;
+(* IOB="true", dont_touch="true" *) reg R_GN;
+(* IOB="true", dont_touch="true" *) reg R_UBN;
+(* IOB="true", dont_touch="true" *) reg R_LBN;
+// Separate IOB data and tri-state registers; no mux follows the last FFs.
+(* IOB="true", dont_touch="true" *) reg [15:0] dq_write_data;
 // Prevent synthesis from re-extracting an address-dependent clock enable.
-(* extract_enable = "no" *) reg dq_drive;
+// One T flip-flop per pad, kept distinct so Vivado can pack every DQ IOB.
+(* IOB="true", dont_touch="true" *) reg [15:0] dq_tristate;
+wire dq_drive = !dq_tristate[0];
+(* IOB="true", dont_touch="true", mark_debug="true" *) reg [15:0] dq_read_data;
+always @(posedge clk) begin
+    if(!detail_stall) dq_read_data <= RD_DATA;
+end
 wire [15:0] R_DQ = dq_drive ? dq_write_data : 16'hzzzz;
 
-(*mark_debug="true"*)wire [15:0] RD_DATA         ;
+wire [15:0] RD_DATA         ;
 reg [15:0]  dout;
 reg [15:0]  dout_d1;
 reg [15:0]  dout_d2;
@@ -168,7 +173,7 @@ wire [21:0] error_addr_snapshot = error_uses_reference ? error_ref_addr_sample :
 wire [15:0] error_expected_snapshot = error_uses_reference ? error_ref_sample : error_current_sample;
 
 (* extract_enable="no" *) reg [21:0] addr;
-reg [21:0]  addr_d;                                 
+(* IOB="true", dont_touch="true" *) reg [21:0] addr_d;
 (* mark_debug="true",keep="true",dont_touch="true" *) reg [22:0] addr_cnt;
 // Same-edge comparison copy: isolate range/terminal logic from address-data
 // and ILA loads without introducing a pipeline or changing the count value.
@@ -183,11 +188,28 @@ reg [22:0]  addr_cnt_d;
 (*mark_debug="true"*)reg [31:0]  err_cnt; 
 
 (*mark_debug="true"*)reg     keep ;
-(*mark_debug="true"*)reg     flg  ; 
+(*mark_debug="true"*)reg     flg  ;
+reg flg_next;
 
 reg         rd_en           ;
 reg         rd_en_d         ;
 reg         rd_en_d2        ;
+// At most two reads overlap: minimum period 7 clocks, capture latency 8/9.
+// Payloads remain paired with their launch address even after A has advanced.
+reg [1:0] read_valid;
+reg [3:0] read_delay_0, read_delay_1;
+reg read_next_bank;
+reg [21:0] read_address_0, read_address_1;
+reg [15:0] read_expected_0, read_expected_1;
+reg read_drain;
+(* mark_debug="true" *) reg read_compare_valid;
+reg read_compare_bank;
+wire read_due_0 = read_valid[0] && (read_delay_0==4'd1);
+wire read_due_1 = read_valid[1] && (read_delay_1==4'd1);
+(* mark_debug="true" *) wire read_sample_valid = read_due_0 || read_due_1;
+wire read_pending = |read_valid;
+wire read_remaining_after_tick = (read_valid[0] && read_delay_0>4'd1) ||
+                                 (read_valid[1] && read_delay_1>4'd1);
 
 wire        start           ;// 连接spi_start_test信号，解析成功后开始测试（仅第一个循环出现）
 reg         start_d1        ;
@@ -290,8 +312,8 @@ wire current_is_initial, addr_count_equal;
 mram_equal_lut #(.WIDTH(22)) eq_current_initial(.a(addr_d),.b({2'b0,vio_addr_ini}),.match(current_is_initial));
 mram_equal_lut #(.WIDTH(23)) eq_count_length(.a(addr_compare_count),.b({2'b0,vio_addr_num}),.match(addr_count_equal));
 wire actual_equals_reference, actual_equals_current;
-mram_equal_lut #(.WIDTH(16)) eq_actual_reference(.a(RD_DATA),.b(dout_ref),.match(actual_equals_reference));
-mram_equal_lut #(.WIDTH(16)) eq_actual_current(.a(RD_DATA),.b(dout_d1),.match(actual_equals_current));
+mram_equal_lut #(.WIDTH(16)) eq_actual_reference(.a(dq_read_data),.b(read_expected_0),.match(actual_equals_reference));
+mram_equal_lut #(.WIDTH(16)) eq_actual_current(.a(dq_read_data),.b(read_expected_1),.match(actual_equals_current));
 // Compare three address slices in parallel, then combine five one-bit
 // results in one LUT. Include the two upper counter bits in the high slice
 // so the original unsigned 23-bit-vs-21-bit relation is preserved.
@@ -402,7 +424,7 @@ spi_protocol u_spi_protocol (
     
     // 给spi模块的参数
     .current_loop(loop_idx),
-    .test_busy(flg),
+    .test_busy(flg || read_pending || read_compare_valid || err_flg),
     .error_cnt(err_cnt),
     .err_flag(err_flg),
     .error_addr(error_addr_snapshot),
@@ -502,10 +524,10 @@ always @(posedge clk or negedge rst_n) begin
         dout_d1     <= 16'h0    ;
         dout_d2     <= 16'h0    ;      
           
-        addr_d      <= 20'h0    ;
+
         addr_cnt_d  <= 21'd0    ;
-        rd_en_d     <= 1'b0;
-        rd_en_d2    <= 1'b0;
+
+
         
         vio_TMODE_D1<= 4'd0     ;
         vio_TMODE_D2<= 4'd0     ;
@@ -527,10 +549,10 @@ always @(posedge clk or negedge rst_n) begin
         dout_d1     <= dout     ;
         dout_d2     <= dout_d1  ;
   
-        addr_d      <= addr     ;
+
         addr_cnt_d  <= addr_cnt ;
-        rd_en_d     <= rd_en;
-        rd_en_d2    <= rd_en_d;
+
+
         
         end
 
@@ -557,7 +579,7 @@ always @(posedge clk or negedge rstn) begin
     else if (start_d1 != start_d2) begin
         // 测试开始时复位所有循环状态
         loop_idx          <= 32'd0;
-        next_loop_start_d1 <= (loop_idx != 32'd0);
+        next_loop_start_d1 <= 1'b0;
         loop_done         <= 1'b0;
         loop_finish       <= 1'b0;
 //        next_loop_start   <= 1'b0;
@@ -617,10 +639,8 @@ always @* begin
         address_source_mask = 3'b100;
     else if ((start_d1 && !start_d2) || next_loop_start_d1)
         address_source_mask = 3'b001;
-    else if (flg && (keep || addr_count_less))
+    else if (flg && addr_count_less)
         address_source_mask = 3'b010;
-    else if (hold_before_one)
-        address_source_mask = 3'b000;
     else
         address_source_mask = 3'b100;
 end
@@ -670,7 +690,59 @@ wire hold_restart_event = (next_loop_start_d2 && !next_loop_start_d3) ||
 (* keep="true",max_fanout=24 *) wire hold_high_run =
     !next_loop_start_d1 && !hold_restart_event && !period_match;
 wire hold_initial_bit = hold_restart_event || addr_count_less;
-(* keep="true" *) wire io_cycle_start = hold_restart_event || (flg && period_match);
+// Do not invent a new cycle at the final period boundary: pending samples
+// drain while the final address and read direction are retained.
+(* keep="true" *) wire io_cycle_start = hold_restart_event ||
+    (flg && period_match && !addr_count_equal);
+wire read_pipeline_flush = spi_start_test || random_seed_wait ||
+    (start_d1 && !start_d2) || next_loop_start_d1;
+wire read_launch = io_cycle_start && rd_en_d && !read_pipeline_flush;
+wire read_end = flg && addr_count_equal && period_match;
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) begin
+        read_valid<=2'b00;read_next_bank<=0;
+        read_delay_0<=0;read_delay_1<=0;
+        read_address_0<=0;read_address_1<=0;
+        read_expected_0<=0;read_expected_1<=0;
+    end else if(read_pipeline_flush) begin
+        read_valid<=2'b00;read_next_bank<=0;
+    end else if(!detail_stall) begin
+        if(read_valid[0]) begin
+            if(read_due_0) read_valid[0]<=0;
+            else read_delay_0<=read_delay_0-4'd1;
+        end
+        if(read_valid[1]) begin
+            if(read_due_1) read_valid[1]<=0;
+            else read_delay_1<=read_delay_1-4'd1;
+        end
+        if(read_launch) begin
+            read_next_bank<=!read_next_bank;
+            if(!read_next_bank) begin
+                read_valid[0]<=1;read_delay_0<=spi_t_avqv_r[3:0];
+                read_address_0<=addr;read_expected_0<=dout;
+            end else begin
+                read_valid[1]<=1;read_delay_1<=spi_t_avqv_r[3:0];
+                read_address_1<=addr;read_expected_1<=dout;
+            end
+        end
+    end
+end
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) begin read_compare_valid<=0;read_compare_bank<=0;end
+    else if(read_pipeline_flush) begin read_compare_valid<=0;read_compare_bank<=0;end
+    else if(!detail_stall) begin
+        read_compare_valid<=read_sample_valid;
+        read_compare_bank<=read_due_0;
+    end
+end
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) read_drain<=0;
+    else if(read_pipeline_flush) read_drain<=0;
+    else if(!detail_stall) begin
+        if(read_end && rd_en_d2) read_drain<=1;
+        else if(!read_remaining_after_tick) read_drain<=0;
+    end
+end
 (* keep="true" *) wire [20:0] addr_hold_cnt_inc = addr_hold_cnt + 21'd1;
 always @(posedge clk or negedge rstn) begin
     if (!rstn)
@@ -717,23 +789,34 @@ always @(posedge clk or negedge rstn) begin
 end
 
 //---
+always @* begin
+    flg_next=flg;
+    if(random_seed_wait || spi_start_test || (start_d1 && !start_d2) || next_loop_start_d1)
+        flg_next=1'b0;
+    else if(!detail_stall) begin
+        if(hold_restart_event) flg_next=1'b1;
+        else if(read_drain) flg_next=read_remaining_after_tick;
+        else if(read_end) flg_next=rd_en_d2 && read_remaining_after_tick;
+    end
+end
+// A new command can replace a paused read. Reset all phase stages together
+// before the first new write cycle rather than exposing the old read direction.
 always @(posedge clk or negedge rstn) begin
-    if(!rstn)
-        flg <= 1'b0;
-    // Release the external interface while a new test/loop prepares address and
-    // data. Re-enable only with the timer/pin origin, never a cycle earlier.
-    // An unready random request also aborts the old producer.
-    else if(random_seed_wait || spi_start_test ||
-            (start_d1 && !start_d2) || next_loop_start_d1)
-        flg <= 1'b0;
-    else if(detail_stall)
-        flg <= flg;
-    else if(hold_restart_event)   // 增加 next_loop_start
-        flg <= 1'b1;
-    else if(addr_count_equal && period_match)
-        flg <= 1'b0;
-    else
-        flg <= flg;   
+    if(!rstn) begin rd_en_d<=0;rd_en_d2<=0;end
+    else if(spi_start_test || random_seed_wait) begin
+        rd_en_d<=(vio_TMODE==4'd1);rd_en_d2<=(vio_TMODE==4'd1);
+    end else if(!detail_stall) begin rd_en_d<=rd_en;rd_en_d2<=rd_en_d;end
+end
+wire io_read_next = detail_stall ? rd_en_d2 : rd_en_d;
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) flg<=0;
+    else flg<=flg_next;
+end
+// A has no mux after this last register. Idle/stall/start choices are on D.
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) addr_d<=0;
+    else if(!flg_next) addr_d<=0;
+    else if(!detail_stall) addr_d<=addr;
 end
 
 //---
@@ -770,23 +853,22 @@ always @(posedge clk or negedge rstn) begin
         error_ref_sample <= 16'd0;
         error_current_sample <= 16'd0;
     end else if (!detail_stall) begin
-        error_ref_addr_sample <= dout_ref_addr;
-        error_current_addr_sample <= addr_d;
-        error_data_snapshot <= RD_DATA;
-        error_ref_sample <= dout_ref;
-        error_current_sample <= dout_d1;
+        error_ref_addr_sample <= read_address_0;
+        error_current_addr_sample <= read_address_1;
+        error_data_snapshot <= dq_read_data;
+        error_ref_sample <= read_expected_0;
+        error_current_sample <= read_expected_1;
     end
 end
-wire early_error = early_match && !current_is_initial && !actual_equals_reference;
-wire late_error = late_match && !actual_equals_current;
-// The selection is only consumed when err_flg is valid. Sample the early
-// comparison independently of loop/start/late-error control; an early error
-// wins when both comparisons fire, as in the original priority chain.
+wire early_error = read_compare_valid && read_compare_bank && !actual_equals_reference;
+wire late_error = read_compare_valid && !read_compare_bank && !actual_equals_current;
+// Select the metadata bank captured with the IOB input on the preceding edge.
+// The data snapshot and error flag become visible together for the mailbox.
 always @(posedge clk or negedge rstn) begin
     if (!rstn)
         error_uses_reference <= 1'b0;
     else if (!detail_stall) begin
-        if (early_error)
+        if (read_compare_bank)
             error_uses_reference <= 1'b1;
         else
             error_uses_reference <= 1'b0;
@@ -795,11 +877,11 @@ end
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         err_flg <= 1'b0;
-    end else if (detail_enabled && (spi_start_test || start_d1!=start_d2 || next_loop_start_d1)) begin
+    end else if (read_pipeline_flush) begin
         err_flg <= 1'b0;
     end else begin
         err_flg <= 1'b0;
-        if (!detail_stall && flg && rd_en_d) begin
+        if (!detail_stall) begin
             if (early_error)
                 err_flg <= 1'b1;
             else if (late_error)
@@ -841,7 +923,7 @@ always @(posedge clk or negedge rstn) begin
         dout <= 16'h0;
     else if(detail_stall)
         dout <= dout;
-    else if((start_d1!=0 && start_d1!=start_d2) || next_loop_start_d1)
+    else if((start_d1!=0 && start_d1!=start_d2) || next_loop_start_d1 || random_read_restart)
         case(vio_din_sel)
             8'd1:   dout <= 16'h0;
             8'd2:   dout <= 16'hFFFF;
@@ -851,11 +933,9 @@ always @(posedge clk or negedge rstn) begin
             8'd6:   dout <= 16'hFFFF;
             8'd7:   dout <= 16'h5555;
             8'd8:   dout <= 16'hAAAA;
-            8'd9:   dout <= random_begin_word; // full x16 word, byte mirrored for x8
+            8'd9:   dout <= random_read_restart ? random_seed_word : random_begin_word;
             default:dout <= 16'h0;
         endcase 
-    else if(vio_din_sel==8'd9 && random_read_restart)
-        dout <= random_seed_word;
     else if(hold_before_one)
         case(vio_din_sel)
             8'd1:   dout <= addr_cnt[15:0];
@@ -877,12 +957,12 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_EN <= 1'b1;
+    else if(!flg_next)
+        R_EN <= 1'b1;
     else if(detail_stall)
         R_EN <= R_EN;
     else if(io_cycle_start)
         R_EN <= (vio_t_EH2EL!=16'd0);
-    else if(!flg)
-        R_EN <= 1'b1;
     else if(vio_t_EH2EL!=16'd0 && hold_sample_count==vio_t_EH2EL)
         R_EN <= 1'b0;
     else if(en_release_match)
@@ -895,12 +975,12 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_WN <= 1'b1;
+    else if(!flg_next || io_read_next)
+        R_WN <= 1'b1;
     else if(detail_stall)
         R_WN <= R_WN;
     else if(io_cycle_start)
         R_WN <= rd_en_d || (vio_t_WH2WL!=16'd0);
-    else if(!flg || rd_en_d2)
-        R_WN <= 1'b1;
     else if(vio_t_WH2WL!=16'd0 && hold_sample_count==vio_t_WH2WL)
         R_WN <= 1'b0;
     else if(wn_release_match)
@@ -913,12 +993,12 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_GN <= 1'b1;
+    else if(!flg_next || !io_read_next)
+        R_GN <= 1'b1;
     else if(detail_stall)
         R_GN <= R_GN;
     else if(io_cycle_start)
         R_GN <= !rd_en_d || (vio_t_GH2GL!=16'd0);
-    else if(!flg || !rd_en_d2)
-        R_GN <= 1'b1;
     else if(vio_t_GH2GL!=16'd0 && hold_sample_count==vio_t_GH2GL)
         R_GN <= 1'b0;
     else if(gn_release_match)
@@ -931,12 +1011,12 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_UBN <= 1'b1;
+    else if(!flg_next)
+        R_UBN <= 1'b1;
     else if(detail_stall)
         R_UBN <= R_UBN;
     else if(io_cycle_start)
         R_UBN <= (vio_t_UBH2UBL!=16'd0);
-    else if(!flg)
-        R_UBN <= 1'b1;
     else if(vio_t_UBH2UBL!=16'd0 && hold_sample_count==vio_t_UBH2UBL)
         R_UBN <= 1'b0;
     else if(ub_release_match)
@@ -949,12 +1029,12 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_LBN <= 1'b1;
+    else if(!flg_next)
+        R_LBN <= 1'b1;
     else if(detail_stall)
         R_LBN <= R_LBN;
     else if(io_cycle_start)
         R_LBN <= (vio_t_LBH2LBL!=16'd0);
-    else if(!flg)
-        R_LBN <= 1'b1;
     else if(vio_t_LBH2LBL!=16'd0 && hold_sample_count==vio_t_LBH2LBL)
         R_LBN <= 1'b0;
     else if(lb_release_match)
@@ -979,13 +1059,9 @@ always @(posedge clk or negedge rstn) begin
     end
 end
 always @(posedge clk or negedge rstn) begin
-    if (!rstn)
-        dq_drive <= 1'b1;
-    else if (!detail_stall) begin
-        // Preserve the original priority: read -> Z; write/period -> driven;
-        // otherwise retain the preceding direction. Keep this decision on D.
-        dq_drive <= !rd_en_d && (dq_write_event || period_match || dq_drive);
-    end
+    if(!rstn) dq_tristate<=16'hffff;
+    else if(!flg_next || io_read_next) dq_tristate<=16'hffff;
+    else if(!detail_stall) dq_tristate<=16'h0000;
 end
 
 
@@ -1017,6 +1093,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         rd_en <= 1'b0;
+    else if(spi_start_test || random_seed_wait)
+        rd_en <= (vio_TMODE==4'd1);
     else if(detail_stall)
         rd_en <= rd_en;
     else begin
@@ -1028,10 +1106,10 @@ always @(posedge clk or negedge rstn) begin
                 rd_en <= 1'b1;
             end
             4'd2: begin  // 写读
-                if(start_d2 == 0 && start_d1 == 1)
+                if((start_d2 == 0 && start_d1 == 1) || next_loop_start_d1 || (!flg && !read_pending))
                     rd_en <= 1'b0;
-                else if(addr_is_last && hold_before_two)
-                    rd_en <= rd_en + 1;
+                else if(!rd_en && addr_is_last && hold_before_two)
+                    rd_en <= 1'b1;
                 else
                     rd_en <= rd_en;
             end
@@ -1060,13 +1138,19 @@ assign start = spi_start_test;// start 信号连接
 assign rstn=rst_n && (!(vio_TMODE_D2!=vio_TMODE_D1));
 //assign rstn = rst_n && locked;
 
-assign EN = flg ? R_EN : 1'b1;
-assign GN = flg ? R_GN : 1'b1;
-assign WN = flg ? (rd_en_d2 ? 1'b1 : R_WN) : 1'b1;
-assign UBN= flg ? R_UBN : 1'b1;
-assign LBN= flg ? R_LBN : 1'b1;
-assign A  = flg ? addr_d : 20'd0;
-assign DQ = flg ? (rd_en_d2 ? 16'hz : R_DQ) : 16'hz;
+// Last-stage registers connect directly to pads: no post-register mode mux.
+assign EN=R_EN;
+assign GN=R_GN;
+assign WN=R_WN;
+assign UBN=R_UBN;
+assign LBN=R_LBN;
+assign A=addr_d;
+generate
+    genvar dq_pad;
+    for(dq_pad=0;dq_pad<16;dq_pad=dq_pad+1) begin : dq_iob
+        assign DQ[dq_pad]=dq_tristate[dq_pad] ? 1'bz : dq_write_data[dq_pad];
+    end
+endgenerate
 assign RD_DATA = DQ;
 
 assign CMOS_SW = vio_CMOS_SW;
