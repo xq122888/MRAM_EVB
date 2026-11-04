@@ -441,20 +441,32 @@ assign vio_t_LBL2LBH_r = spi_t_lbl2lbh_r;
 
 
 
-// ========== TRNG模块 ==========
-wire [7:0] trng_data;
-wire trng_valid;
-
-trng_8bit u_trng_8bit (
-    .clk      (clk),        // 使用与测试逻辑相同的时钟 clk200m
-    .rst_n    (rstn),       // 使用相同的复位信号
-    .rnd_data (trng_data),
-    .rnd_valid(trng_valid)
-);
-// TRNG数据寄存器（用于保持随机数）
-reg [7:0] trng_data_reg;
-reg trng_valid_reg;
-
+// ========== Reproducible pseudo-random test data ==========
+// Reproducible test data: xorshift32, never seeded with zero. The read
+// pass must replay the write pass, rather than sampling live entropy again.
+localparam [31:0] RANDOM_TEST_SEED = 32'h6d2b79f5;
+reg [31:0] random_seed;
+reg [31:0] random_state;
+function [31:0] random_next;
+    input [31:0] value;
+    reg [31:0] mixed;
+    begin
+        mixed = value ^ (value << 13);
+        mixed = mixed ^ (mixed >> 17);
+        random_next = mixed ^ (mixed << 5);
+    end
+endfunction
+(* keep="true" *) wire [31:0] random_state_next = random_next(random_state);
+(* keep="true" *) wire [31:0] random_seed_next = random_next(random_seed);
+// The controller emits its loop-start pulse on a restart from a nonzero
+// loop index too. Cover both start edges so this is not a seed advance.
+wire random_new_test = (start_d1 != start_d2);
+wire random_read_restart = (vio_TMODE==4'd2) && rd_en && !rd_en_d;
+wire [31:0] random_begin_seed = random_new_test ? RANDOM_TEST_SEED : random_seed_next;
+wire random_x8 = (chip_type==8'h80) || (chip_type==8'h82);
+wire [15:0] random_begin_word = random_x8 ? {random_begin_seed[7:0],random_begin_seed[7:0]} : random_begin_seed[15:0];
+wire [15:0] random_seed_word = random_x8 ? {random_seed[7:0],random_seed[7:0]} : random_seed[15:0];
+wire [15:0] random_next_word = random_x8 ? {random_state_next[7:0],random_state_next[7:0]} : random_state_next[15:0];
 
 //------------------------------------------------------------
 // 延时
@@ -546,7 +558,11 @@ always @(posedge clk or negedge rstn) begin
 
         // ---------- 2. 检测循环结束条件（与原逻辑完全一致） ----------
         if (!detail_stall && flg && (addr_is_last) && (hold_before_one)) begin
-            if (vio_TMODE == 4'd2 && rd_en_d) begin
+            // Length one has no penultimate address to notify completion. Arm
+            // the pending read at the write->read phase change, so keep drops
+            // before the sole read ends instead of starting an extra write.
+            if (vio_TMODE == 4'd2 && (rd_en_d ||
+                (vio_din_sel==8'd9 && vio_addr_num==21'd1 && rd_en))) begin
                 if (!loop_finish) loop_finish <= 1'b1;
             end
             else if (vio_TMODE != 4'd2) begin
@@ -773,20 +789,17 @@ end
 
 
 always @(posedge clk or negedge rstn) begin
-    if(!rstn) begin
-        trng_data_reg <= 8'd0;
-        trng_valid_reg <= 1'b0;
-    end
-    else if(detail_stall) begin
-        trng_data_reg <= trng_data_reg;
-        trng_valid_reg <= trng_valid_reg;
-    end
-    else if(trng_valid) begin
-        trng_data_reg <= trng_data;
-        trng_valid_reg <= 1'b1;
-    end
-    else begin
-        trng_valid_reg <= 1'b0;
+    if (!rstn) begin
+        random_seed <= RANDOM_TEST_SEED;
+        random_state <= RANDOM_TEST_SEED;
+    end else if (!detail_stall && vio_din_sel==8'd9) begin
+        if (random_new_test || next_loop_start_d1) begin
+            random_seed <= random_begin_seed;
+            random_state <= random_begin_seed;
+        end else if (random_read_restart)
+            random_state <= random_seed;
+        else if (hold_before_one)
+            random_state <= random_state_next;
     end
 end
 
@@ -806,16 +819,18 @@ always @(posedge clk or negedge rstn) begin
             8'd6:   dout <= 16'hFFFF;
             8'd7:   dout <= 16'h5555;
             8'd8:   dout <= 16'hAAAA;
-            8'd9:   dout <= {trng_data_reg, trng_data_reg};  // 8位扩展为16位
+            8'd9:   dout <= random_begin_word; // full x16 word, byte mirrored for x8
             default:dout <= 16'h0;
         endcase 
+    else if(vio_din_sel==8'd9 && random_read_restart)
+        dout <= random_seed_word;
     else if(hold_before_one)
         case(vio_din_sel)
             8'd1:   dout <= addr_cnt[15:0];
             8'd2:   dout <= 16'hFFFF-addr_cnt[15:0];
             8'd3:   dout <= ~dout;
             8'd4:   dout <= ~dout;
-            8'd9:   dout <= {trng_data_reg^addr_cnt[7:0], trng_data_reg^addr_cnt[7:0]};//根据地址变化
+            8'd9:   dout <= random_next_word; // one step per address update
             default:dout <= dout;
         endcase
     else

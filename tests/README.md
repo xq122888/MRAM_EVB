@@ -1,5 +1,8 @@
 # SPI report regression
 
+The random-data repair and its replay/physical-pin regression are documented in
+[random-pattern.md](random-pattern.md); run `bash tests/run_random_pattern.sh`.
+
 The 25-byte detailed-error reporting feature and its build/board checks are
 documented in [detailed-error-log.md](detailed-error-log.md). Run its additional
 protocol and full-controller regression with `bash tests/run_spi_detail.sh`.

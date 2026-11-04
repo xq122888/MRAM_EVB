@@ -10,26 +10,5 @@ create_clock -period 5.000 -name clk200m -waveform {0.000 2.500} -add [get_pins 
 #resize_pblock [get_pblocks pblock_ila_core_inst] -add {RAMB18_X0Y88:RAMB18_X0Y97}
 #resize_pblock [get_pblocks pblock_ila_core_inst] -add {RAMB36_X0Y44:RAMB36_X0Y48}
 
-# =====================================================
-# TRNG 环形振荡器约束
-# 禁用时序检查，让振荡器自由运行
-# =====================================================
-
-# 方法1：针对特定层次路径设置
-set_false_path -to [get_pins -hierarchical -filter {NAME =~ *ro_chain*}]
-
-# 方法2：更精确的约束（推荐）
-set_false_path -through [get_nets -hierarchical -filter {NAME =~ *u_trng_8bit/ro_chain*}]
-
-# 方法3：禁用整个TRNG模块的时序检查
-set_false_path -to [get_cells -hierarchical -filter {NAME =~ *u_trng_8bit*}]
-
-# 方法4：只禁用振荡器环路
-set_property ALLOW_COMBINATORIAL_LOOPS true [get_nets -hierarchical -filter {NAME =~ *u_trng_8bit/ro_chain*}]
-
-
-
-
-
-
-
+# Random test data now uses synchronous PRNG logic on clk200m.
+# The old ring oscillator and its timing exceptions are no longer used.
