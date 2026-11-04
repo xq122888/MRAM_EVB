@@ -89,7 +89,9 @@ source [file join [get_property DIRECTORY [current_project]] .. .. tests collect
 
 ## 仿真
 
-需要 Icarus Verilog 12、`vvp`、Python 3，以及包含 `a317d2b` 的 Git 历史。
+需要 Icarus Verilog 12、`vvp` 和 Python 3。
+当前首周期/循环重启时序及独立引脚检查见 [mram-pin-timing.md](mram-pin-timing.md)。
+下文历史时序修复中的旧 RTL 等价计数描述此前提交，现已由独立引脚检查替代。
 
 ```sh
 bash tests/run_spi_detail.sh
@@ -101,7 +103,7 @@ bash tests/run_top_timing.sh
 明细优先于汇总、累计错误标志，以及模式 0/1 和关闭日志的兼容性。
 完整 `top` 测试通过真实 SPI 配置注入数字比较错误，覆盖两种比较路径、
 慢轮询期间 MRAM 状态保持、跨循环计数、无错误路径，以及有待发送记录时同模式重新启动。
-旧回归继续逐周期对比关闭详细日志时的控制状态，并校验 11/17 字节帧。
+当前回归检查关闭详细日志时的引脚时序，并校验 11/17 字节帧。
 
 仿真使用理想时钟/TRNG 模型及数字读值注入，不验证物理 MRAM、模拟信号质量、
 实际随机性、外部 SPI 输入输出约束或布局布线时序。云环境没有 Vivado，未生成新 bitstream。

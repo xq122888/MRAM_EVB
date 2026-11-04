@@ -286,9 +286,8 @@ mram_equal_lut eq_lb_release_r(.a(hold_release_count),.b(spi_lb_release_r),.matc
 wire lb_release_match = rd_en_d2 ? lb_release_r_match : lb_release_w_match;
 wire late_match;
 mram_equal_lut eq_late(.a(hold_sample_count),.b({5'b0,spi_t_avqv_r}),.match(late_match));
-wire current_is_initial, current_equals_address, addr_count_equal;
+wire current_is_initial, addr_count_equal;
 mram_equal_lut #(.WIDTH(22)) eq_current_initial(.a(addr_d),.b({2'b0,vio_addr_ini}),.match(current_is_initial));
-mram_equal_lut #(.WIDTH(22)) eq_current_address(.a(addr_d),.b(addr),.match(current_equals_address));
 mram_equal_lut #(.WIDTH(23)) eq_count_length(.a(addr_compare_count),.b({2'b0,vio_addr_num}),.match(addr_count_equal));
 wire actual_equals_reference, actual_equals_current;
 mram_equal_lut #(.WIDTH(16)) eq_actual_reference(.a(RD_DATA),.b(dout_ref),.match(actual_equals_reference));
@@ -575,12 +574,13 @@ always @(posedge clk or negedge rstn) begin
         end
 
         // ---------- 2. 检测循环结束条件（与原逻辑完全一致） ----------
-        if (!detail_stall && flg && (addr_is_last) && (hold_before_one)) begin
+        if (!detail_stall && flg && addr_is_last &&
+            (hold_before_one || (vio_addr_num==21'd1 && hold_before_two))) begin
             // Length one has no penultimate address to notify completion. Arm
             // the pending read at the write->read phase change, so keep drops
             // before the sole read ends instead of starting an extra write.
             if (vio_TMODE == 4'd2 && (rd_en_d ||
-                (vio_din_sel==8'd9 && vio_addr_num==21'd1 && rd_en))) begin
+                (vio_addr_num==21'd1 && rd_en))) begin
                 if (!loop_finish) loop_finish <= 1'b1;
             end
             else if (vio_TMODE != 4'd2) begin
@@ -615,7 +615,7 @@ end
 always @* begin
     if (detail_stall)
         address_source_mask = 3'b100;
-    else if (start_d1!=0 && start_d1!=start_d2)
+    else if ((start_d1 && !start_d2) || next_loop_start_d1)
         address_source_mask = 3'b001;
     else if (flg && (keep || addr_count_less))
         address_source_mask = 3'b010;
@@ -637,7 +637,10 @@ end
 // Time qualification is needed only by the CE. Choose clear/increment data
 // independently, so the period comparison need not also select every D bit.
 wire count_restart = (start_d1 != start_d2) || next_loop_start_d1;
-wire count_wrap = keep && addr_is_last;
+// A single address wraps only at the write->read turnaround. Pure write/read
+// and the final read must advance to length, so the engine stops after one cycle.
+wire count_wrap = keep && addr_is_last &&
+    ((vio_addr_num!=21'd1) || (vio_TMODE==4'd2 && !rd_en_d));
 (* keep="true",max_fanout=24 *) wire count_update_enable = !detail_stall &&
     (count_restart || (hold_before_two && (count_wrap || addr_count_less)));
 wire count_clear_data = count_restart || count_wrap;
@@ -667,6 +670,7 @@ wire hold_restart_event = (next_loop_start_d2 && !next_loop_start_d3) ||
 (* keep="true",max_fanout=24 *) wire hold_high_run =
     !next_loop_start_d1 && !hold_restart_event && !period_match;
 wire hold_initial_bit = hold_restart_event || addr_count_less;
+(* keep="true" *) wire io_cycle_start = hold_restart_event || (flg && period_match);
 (* keep="true" *) wire [20:0] addr_hold_cnt_inc = addr_hold_cnt + 21'd1;
 always @(posedge clk or negedge rstn) begin
     if (!rstn)
@@ -716,13 +720,15 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         flg <= 1'b0;
-    // A new random request aborts the preceding engine while awaiting a seed;
-    // cancellation must not resume the old producer with the new parameters.
-    else if(random_seed_wait)
+    // Release the external interface while a new test/loop prepares address and
+    // data. Re-enable only with the timer/pin origin, never a cycle earlier.
+    // An unready random request also aborts the old producer.
+    else if(random_seed_wait || spi_start_test ||
+            (start_d1 && !start_d2) || next_loop_start_d1)
         flg <= 1'b0;
     else if(detail_stall)
         flg <= flg;
-    else if((start_d2 != 0 && start_d2 != start_d3) || next_loop_start_d1)   // 增加 next_loop_start
+    else if(hold_restart_event)   // 增加 next_loop_start
         flg <= 1'b1;
     else if(addr_count_equal && period_match)
         flg <= 1'b0;
@@ -865,15 +871,19 @@ end
 
 
 //---
+// Initialize the complete pin level at EVERY cycle origin, including the
+// first address after reset/restart and phase/loop boundaries. No address-value
+// detector is used: address zero and a one-address repeated loop work alike.
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         R_EN <= 1'b1;
     else if(detail_stall)
         R_EN <= R_EN;
-    else if(vio_t_EH2EL==0 &&
-            ((start_d2 && !start_d3) || (!current_equals_address && (keep || (|addr)))))
-        R_EN <= 1'b0;
-    else if(vio_t_EH2EL!=0 && hold_sample_count==vio_t_EH2EL)
+    else if(io_cycle_start)
+        R_EN <= (vio_t_EH2EL!=16'd0);
+    else if(!flg)
+        R_EN <= 1'b1;
+    else if(vio_t_EH2EL!=16'd0 && hold_sample_count==vio_t_EH2EL)
         R_EN <= 1'b0;
     else if(en_release_match)
         R_EN <= 1'b1;
@@ -887,11 +897,11 @@ always @(posedge clk or negedge rstn) begin
         R_WN <= 1'b1;
     else if(detail_stall)
         R_WN <= R_WN;
-    else if(vio_t_WH2WL==0 && keep && !current_equals_address)
-        R_WN <= 1'b0;
-    else if(vio_t_WH2WL==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
-        R_WN <= 1'b0;
-    else if(vio_t_WH2WL!=0 && hold_sample_count==vio_t_WH2WL)
+    else if(io_cycle_start)
+        R_WN <= rd_en_d || (vio_t_WH2WL!=16'd0);
+    else if(!flg || rd_en_d2)
+        R_WN <= 1'b1;
+    else if(vio_t_WH2WL!=16'd0 && hold_sample_count==vio_t_WH2WL)
         R_WN <= 1'b0;
     else if(wn_release_match)
         R_WN <= 1'b1;
@@ -905,11 +915,11 @@ always @(posedge clk or negedge rstn) begin
         R_GN <= 1'b1;
     else if(detail_stall)
         R_GN <= R_GN;
-    else if(vio_t_GH2GL==0 && keep && !current_equals_address)
-        R_GN <= 1'b0;
-    else if(vio_t_GH2GL==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
-        R_GN <= 1'b0;
-    else if(vio_t_GH2GL!=0 && hold_sample_count==vio_t_GH2GL)
+    else if(io_cycle_start)
+        R_GN <= !rd_en_d || (vio_t_GH2GL!=16'd0);
+    else if(!flg || !rd_en_d2)
+        R_GN <= 1'b1;
+    else if(vio_t_GH2GL!=16'd0 && hold_sample_count==vio_t_GH2GL)
         R_GN <= 1'b0;
     else if(gn_release_match)
         R_GN <= 1'b1;
@@ -923,11 +933,11 @@ always @(posedge clk or negedge rstn) begin
         R_UBN <= 1'b1;
     else if(detail_stall)
         R_UBN <= R_UBN;
-    else if(vio_t_UBH2UBL==0 && keep && !current_equals_address)
-        R_UBN <= 1'b0;
-    else if(vio_t_UBH2UBL==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
-        R_UBN <= 1'b0;
-    else if(vio_t_UBH2UBL!=0 && hold_sample_count==vio_t_UBH2UBL)
+    else if(io_cycle_start)
+        R_UBN <= (vio_t_UBH2UBL!=16'd0);
+    else if(!flg)
+        R_UBN <= 1'b1;
+    else if(vio_t_UBH2UBL!=16'd0 && hold_sample_count==vio_t_UBH2UBL)
         R_UBN <= 1'b0;
     else if(ub_release_match)
         R_UBN <= 1'b1;
@@ -941,11 +951,11 @@ always @(posedge clk or negedge rstn) begin
         R_LBN <= 1'b1;
     else if(detail_stall)
         R_LBN <= R_LBN;
-    else if(vio_t_LBH2LBL==0 && keep && !current_equals_address)
-        R_LBN <= 1'b0;
-    else if(vio_t_LBH2LBL==0 && ((start_d2!=0 && start_d2!=start_d3) || (!current_equals_address && addr!=0)))
-        R_LBN <= 1'b0;
-    else if(vio_t_LBH2LBL!=0 && hold_sample_count==vio_t_LBH2LBL)
+    else if(io_cycle_start)
+        R_LBN <= (vio_t_LBH2LBL!=16'd0);
+    else if(!flg)
+        R_LBN <= 1'b1;
+    else if(vio_t_LBH2LBL!=16'd0 && hold_sample_count==vio_t_LBH2LBL)
         R_LBN <= 1'b0;
     else if(lb_release_match)
         R_LBN <= 1'b1;
@@ -954,11 +964,10 @@ always @(posedge clk or negedge rstn) begin
 end
 
 //---
-// Combine the two original zero-delay write conditions before direction
-// control. Writes take priority over the end-of-period zero-data update.
-wire dq_write_event = (vio_t_AV2DV==16'd0 &&
-    ((start_d2 && !start_d3) || (!current_equals_address && (keep || (|addr))))) ||
-    (vio_t_AV2DV!=16'd0 && hold_sample_count==vio_t_AV2DV);
+// Load write data at the same cycle origin as CE/WE/byte enables, including
+// the first address of every loop. This takes priority over end-period zero.
+wire dq_write_event = (vio_t_AV2DV==16'd0 && io_cycle_start) ||
+    (vio_t_AV2DV!=16'd0 && flg && hold_sample_count==vio_t_AV2DV);
 always @(posedge clk or negedge rstn) begin
     if (!rstn)
         dq_write_data <= 16'd0;

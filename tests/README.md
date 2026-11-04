@@ -1,5 +1,12 @@
 # SPI report regression
 
+Current MRAM first-cycle/loop-restart pin fixes and their waveform contract are
+documented in [mram-pin-timing.md](mram-pin-timing.md). Run
+`bash tests/run_top_timing.sh` for independent pin checks, arithmetic boundaries
+and end-to-end reports. The historical a317d2b state/pin equivalence bench has
+been replaced because it preserved the old first-cycle bugs. References to that
+bench/count below describe earlier commits, not current validation requirements.
+
 The TRNG-seeded random-data repair and its digital replay regression are documented
 in [random-pattern.md](random-pattern.md). Run `bash tests/run_random_pattern.sh`
 and `bash tests/run_trng_seed.sh` for seed handling, conditioning and health checks.
@@ -101,20 +108,18 @@ path explains all sequence-number errors.
 - Rewrites timing/address boundary comparisons with explicit operand widths and
   zero/one guards, and removes subtraction of loop_count before its comparison.
 
-Run the cycle comparison and arithmetic boundary tests:
+Run the current pin-contract and arithmetic boundary tests:
 
 ```sh
 bash tests/run_top_timing.sh
 ```
 
 Use the same IVERILOG/VVP/IVL_BASE environment variables as above for cloud tools.
-The runner reads pre-refactor `top.v` from Git commit a317d2b; history containing
-that commit and Python 3 are required. It compares actual RTL state/pins over
-617,129 cycles (modes 0/1/2, ACK timing, restart, periods 7 through 65535, zero
-loop count and 32-bit carry boundaries), and checks 342,144 arithmetic cases
-including all 65,536 timing-limit values. Ideal clock/TRNG/read-bus models are
-used **only** for this counter/control comparison. They do not verify actual
-clock generation, randomness, MRAM operation, signal integrity, or timing closure.
+The runner now checks external pins against an independent expected waveform,
+854,920 arithmetic/compare cases (including all 65,536 timing-limit values and
+32-bit loop boundaries), and 10 complete SPI reports. Full Git history is no
+longer needed. Ideal clock/TRNG/read-bus models do not verify physical clock
+generation, entropy, MRAM access delays, signal integrity, or timing closure.
 
 Required implementation validation after pulling this change:
 
