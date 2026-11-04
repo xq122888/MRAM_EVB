@@ -1,7 +1,8 @@
 # 详细错误日志
 
 本功能在 `feat/detailed-error-log` 分支开发。适用于支持 25 字节错误帧的上位机。
-云端进行了 RTL 仿真；本功能还需要重新综合、实现及上板验证。
+云端进行了 RTL 仿真；源码 be92d26 的用户实现报告已通过现有约束下的 setup/hold 检查，
+仍待新 bitstream 上板验证。该结果只对应此次实现；其他实现需要检查各自的报告。
 分支内继承的 `top.bit`、`.ltx` 和实现结果没有重新生成，不包含本次功能。
 
 ## 启用与输出
@@ -256,3 +257,36 @@ EN 路径已不在失败清单中。两个主要违例来自地址范围判断�
 以及 20 条完整控制器错误明细和协议层字段/重试测试。
 
 剩余微小负裕量仍按违例处理，需要通过新的完整实现报告确认全部 setup/hold。
+
+## be92d26 实现已满足现有时序约束
+
+`timing_bundle_20261104_094845.rpt` 对应源码 be92d26，使用 Vivado 2018.3、
+`Performance_ExplorePostRoutePhysOpt`，post-route phys_opt 已完成。
+主时钟周期为 5.000 ns（200 MHz）。报告结果为：
+
+| 指标 | 结果 |
+| --- | --- |
+| WNS | +0.024 ns |
+| TNS / setup 失败端点 | 0.000 ns / 0 |
+| WHS | +0.019 ns |
+| THS / hold 失败端点 | 0.000 ns / 0 |
+| 脉宽失败端点 | 0 |
+
+报告明确显示 `All user specified timing constraints are met.`。
+这证明该实现满足报告中已指定的时序约束，不替代物理 SPI/MRAM 上板功能验证。
+
+直接基于此次已通过的 `impl_2` 执行 Generate Bitstream，保留同次生成的 bit 和调试探针。
+如需明确导出匹配的 `top.ltx`，生成 bit 后打开此实现，在 Tcl Console 执行：
+
+```tcl
+open_run impl_2
+set impl_dir [get_property DIRECTORY [get_runs impl_2]]
+write_debug_probes -force [file join $impl_dir top.ltx]
+```
+
+使用此实现目录新生成的 `top.bit` 和匹配 `.ltx` 编程。先运行详细日志关闭的多循环测试，
+再启用模式 2、配置字节 19 为 1。没有错误时只有 17 字节汇总；有错误时，每条错误应有
+25 字节明细，错误序号在每轮内从 1 连续计数，明细数量与该轮最终 17 字节汇总错误数一致。
+保留本次时序报告、bitstream 和上位机 trace，以便关联实际烧录版本。
+
+本次仅更新文档；FPGA 源码和仓库中继承的 bitstream 未再修改。
