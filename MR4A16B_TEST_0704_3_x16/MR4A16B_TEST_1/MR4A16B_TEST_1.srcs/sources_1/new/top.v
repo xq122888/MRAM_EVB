@@ -142,7 +142,7 @@ reg [3:0]   vio_TMODE_D2    ;
 (* IOB="true", dont_touch="true" *) reg R_UBN;
 (* IOB="true", dont_touch="true" *) reg R_LBN;
 // Separate IOB data and tri-state registers; no mux follows the last FFs.
-(* IOB="true", dont_touch="true" *) reg [15:0] dq_write_data;
+(* IOB="true", dont_touch="true", mark_debug="true" *) reg [15:0] dq_write_data;
 // Prevent synthesis from re-extracting an address-dependent clock enable.
 // One T flip-flop per pad, kept distinct so Vivado can pack every DQ IOB.
 (* IOB="true", dont_touch="true" *) reg [15:0] dq_tristate;

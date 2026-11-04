@@ -66,6 +66,9 @@ DQ 每位独立的 T 寄存器直接控制引脚三态，避免一个方向寄�
 200 MHz 内部时序、外部器件建立/保持和板级延迟仍需分别验证。
 
 ILA probe1 现在观察 `dq_read_data`，即输入寄存器结果，需要使用同次生成的 ltx。
+probe4 观察 `dq_write_data` 的 16 位输出寄存器，源码标记保留该调试网络。
+原 `DQ_OBUF` 是旧输出结构的综合网络别名，不能用于当前双向 IOB 结构；
+否则会在 XDC 连接时返回空网络，并导致 probe4 的 16 个通道全部未连接。
 ILA 同时钟观测该 Q 会比实际 DQ 锁存晚一拍，对应 `read_compare_valid`；
 按需用 Set Up Debug 添加 `read_sample_valid` 和 `read_compare_valid` 以区分锁存与比较。
 

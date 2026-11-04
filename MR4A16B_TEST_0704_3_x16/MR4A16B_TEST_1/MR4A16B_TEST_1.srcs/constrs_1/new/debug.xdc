@@ -1,5 +1,6 @@
 # Current SPI debug configuration only. Create the core before any port use.
 # Old UART / intermediate-design reconnection history has been removed.
+# Probe 1/4 observe registered DQ input/output data; no obsolete DQ_OBUF alias.
 # Probe 18 observes the actual protocol MISO output, and dbg_hub uses 200 MHz.
 create_debug_core u_ila_0 ila
 set_property ALL_PROBE_SAME_MU true [get_debug_cores u_ila_0]
@@ -30,7 +31,7 @@ connect_debug_port u_ila_0/probe3 [get_nets [list {addr_cnt[0]} {addr_cnt[1]} {a
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe4]
 set_property port_width 16 [get_debug_ports u_ila_0/probe4]
-connect_debug_port u_ila_0/probe4 [get_nets [list {DQ_OBUF[0]} {DQ_OBUF[1]} {DQ_OBUF[2]} {DQ_OBUF[3]} {DQ_OBUF[4]} {DQ_OBUF[5]} {DQ_OBUF[6]} {DQ_OBUF[7]} {DQ_OBUF[8]} {DQ_OBUF[9]} {DQ_OBUF[10]} {DQ_OBUF[11]} {DQ_OBUF[12]} {DQ_OBUF[13]} {DQ_OBUF[14]} {DQ_OBUF[15]}]]
+connect_debug_port u_ila_0/probe4 [get_nets [list {dq_write_data[0]} {dq_write_data[1]} {dq_write_data[2]} {dq_write_data[3]} {dq_write_data[4]} {dq_write_data[5]} {dq_write_data[6]} {dq_write_data[7]} {dq_write_data[8]} {dq_write_data[9]} {dq_write_data[10]} {dq_write_data[11]} {dq_write_data[12]} {dq_write_data[13]} {dq_write_data[14]} {dq_write_data[15]}]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe5]
 set_property port_width 21 [get_debug_ports u_ila_0/probe5]

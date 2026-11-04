@@ -39,6 +39,7 @@ proc mock_get_nets {args} {
     set nets [lindex $args 0]
     foreach net $nets {
         if {[string match *u_uart_protocol* $net]} {error "Stale UART debug net: $net"}
+        if {[regexp {^DQ_OBUF\[} $net]} {error "Removed DQ output alias: $net"}
     }
     return $nets
 }
@@ -130,7 +131,12 @@ if {$loop_count != 45 || $meta_count != 5 || $hub_frequency != 200000000 ||
 if {[lindex [dict get $connections u_ila_0/probe1] 0] ne {dq_read_data[0]} || [lindex [dict get $connections u_ila_0/probe1] 15] ne {dq_read_data[15]}} {
     error "DQ probe must observe the IOB input-register data"
 }
+for {set bit 0} {$bit < 16} {incr bit} {
+    if {[lindex [dict get $connections u_ila_0/probe4] $bit] ne [format {dq_write_data[%d]} $bit]} {
+        error "DQ output probe must observe all 16 registered output-data bits in order"
+    }
+}
 if {[dict get $connections u_ila_0/probe18] ne "spi_miso_OBUF"} {
     error "MISO probe must observe the actual protocol output"
 }
-puts "PASS: restricted XDC commands; 45 RO nets, 5 first-stage D pins, 32 ordered ILA probes and 200 MHz debug clock"
+puts "PASS: restricted XDC commands; 45 RO nets, 5 first-stage D pins, 32 ordered ILA probes, registered DQ input/output and 200 MHz debug clock"
