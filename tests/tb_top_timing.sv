@@ -200,6 +200,10 @@ module tb_top_predicates;
   reg [15:0] unit_ub_w=2,unit_ub_r=10,unit_lb_w=2,unit_lb_r=10;
   wire phase_d=read_select[0],phase_d2=read_select[1];
   wire [15:0] unit_selected_period=phase_d2?unit_period_r:unit_period_w;
+  // Exhaust the new 7/9-bit LUT comparators against the native operator.
+  wire slice_less7,slice_less9;
+  mram_less_lut #(.WIDTH(7)) lt_slice7(.a(count[6:0]),.b(length[6:0]),.less(slice_less7));
+  mram_less_lut #(.WIDTH(9)) lt_slice9(.a(count[8:0]),.b(length[8:0]),.less(slice_less9));
   integer n,k,cases=0;
   top dut(.clkp(1'b0),.clkn(1'b1),.rst_n(1'b0),.spi_cs_n(1'b1),
           .spi_sclk(1'b0),.spi_mosi(1'b0));
@@ -242,7 +246,9 @@ module tb_top_predicates;
   task check;
     begin
       #1;cases=cases+1;
-      if(dut.loop_idx_inc !== (index+32'd1) ||
+      if(slice_less7 !== (count[6:0]<length[6:0]) ||
+         slice_less9 !== (count[8:0]<length[8:0]) ||
+         dut.loop_idx_inc !== (index+32'd1) ||
          dut.addr_cnt_inc !== ((count+32'd1) & 32'h007fffff) ||
          dut.gn_release_match !== (hold==(unit_selected_period-dut.vio_t_GL2GH)) ||
          dut.hold_before_one !== (hold+1==unit_selected_period) ||
@@ -315,6 +321,11 @@ module tb_top_predicates;
         hold=21'h0fffe;check;
         hold=21'h1fffff;check;
       end
+    end
+    // All 512 x 512 input pairs cover the complete 9-bit domain and repeat
+    // every 7-bit pair, while the controller predicates remain checked too.
+    for(n=0;n<512;n=n+1) begin
+      for(k=0;k<512;k=k+1) begin count=n;length=k;check;end
     end
     $display("PASS: %0d predicate comparisons against original arithmetic, including unequal banks and GN underflow",cases);
     $finish;

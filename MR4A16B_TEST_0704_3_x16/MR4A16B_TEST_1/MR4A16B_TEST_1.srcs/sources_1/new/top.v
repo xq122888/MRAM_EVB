@@ -289,11 +289,11 @@ mram_equal_lut #(.WIDTH(16)) eq_actual_current(.a(RD_DATA),.b(dout_d1),.match(ac
 // results in one LUT. Include the two upper counter bits in the high slice
 // so the original unsigned 23-bit-vs-21-bit relation is preserved.
 (* keep = "true" *) wire [2:0] count_less_slice, count_equal_slice;
-assign count_less_slice[0] = addr_cnt[6:0] < vio_addr_num[6:0];
+mram_less_lut #(.WIDTH(7)) lt_count_slice_0(.a(addr_cnt[6:0]),.b(vio_addr_num[6:0]),.less(count_less_slice[0]));
 assign count_equal_slice[0] = addr_cnt[6:0] == vio_addr_num[6:0];
-assign count_less_slice[1] = addr_cnt[13:7] < vio_addr_num[13:7];
+mram_less_lut #(.WIDTH(7)) lt_count_slice_1(.a(addr_cnt[13:7]),.b(vio_addr_num[13:7]),.less(count_less_slice[1]));
 assign count_equal_slice[1] = addr_cnt[13:7] == vio_addr_num[13:7];
-assign count_less_slice[2] = addr_cnt[22:14] < {2'b0,vio_addr_num[20:14]};
+mram_less_lut #(.WIDTH(9)) lt_count_slice_2(.a(addr_cnt[22:14]),.b({2'b0,vio_addr_num[20:14]}),.less(count_less_slice[2]));
 // The reported high-slice equality used a CARRY4 before address selection.
 // A three-group LUT equality keeps that reduction out of the carry chain.
 mram_equal_lut #(.WIDTH(9)) eq_count_high_slice(
@@ -1058,4 +1058,26 @@ endgenerate
 (* keep = "true" *) wire equal_low = &equal_group[3:0];
 (* keep = "true" *) wire equal_high = &equal_group[7:4];
 assign match = equal_low && equal_high;
+endmodule
+
+// Small parallel comparisons: each 3-bit less/equal test fits a LUT6, and
+// their five-result lexicographic combination fits another LUT. Prevent a
+// 7/9-bit CARRY comparison from preceding the range-decision control logic.
+// Supported widths are 1..9; the controller uses 7 and 9.
+module mram_less_lut #(parameter WIDTH=7)(
+    input wire [WIDTH-1:0] a, b,
+    output wire less
+);
+wire [8:0] a_padded = {{(9-WIDTH){1'b0}},a};
+wire [8:0] b_padded = {{(9-WIDTH){1'b0}},b};
+(* keep="true" *) wire [2:0] part_less, part_equal;
+generate
+    genvar lt_group;
+    for (lt_group=0; lt_group<3; lt_group=lt_group+1) begin : compare_group
+        assign part_less[lt_group] = a_padded[lt_group*3 +: 3] < b_padded[lt_group*3 +: 3];
+        assign part_equal[lt_group] = a_padded[lt_group*3 +: 3] == b_padded[lt_group*3 +: 3];
+    end
+endgenerate
+assign less = part_less[2] || (part_equal[2] && part_less[1]) ||
+              (part_equal[2] && part_equal[1] && part_less[0]);
 endmodule
