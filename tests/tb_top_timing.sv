@@ -109,6 +109,7 @@ module tb_top_timing;
     #1;
     if(checking) begin
       cycles=cycles+1;
+      if(dut.addr_compare_count!==dut.addr_cnt) $fatal(1,"Address comparison replica diverged");
       if(dut.hold_release_count!==dut.addr_hold_cnt || dut.hold_sample_count!==dut.addr_hold_cnt)
         $fatal(1,"Timer replicas lost synchronous state");
       if ({dut.loop_idx,dut.loop_done,dut.loop_finish,dut.frame_ack_latched,
@@ -224,13 +225,17 @@ module tb_top_predicates;
   wire slice_less7,slice_less9;
   mram_less_lut #(.WIDTH(7)) lt_slice7(.a(count[6:0]),.b(length[6:0]),.less(slice_less7));
   mram_less_lut #(.WIDTH(9)) lt_slice9(.a(count[8:0]),.b(length[8:0]),.less(slice_less9));
+  reg [4:0] unit_tx_length=0,unit_tx_pointer=0;
   integer n,k,cases=0;
   top dut(.clkp(1'b0),.clkn(1'b1),.rst_n(1'b0),.spi_cs_n(1'b1),
           .spi_sclk(1'b0),.spi_mosi(1'b0));
   initial begin
     force dut.addr_hold_cnt=hold;force dut.vio_t_AVAV=unit_selected_period;
+    force dut.u_spi_protocol.tx_byte_cnt=unit_tx_length;
+    force dut.u_spi_protocol.tx_byte_ptr=unit_tx_pointer;
     force dut.hold_release_count=hold;force dut.hold_sample_count=hold;
     force dut.addr_cnt=count;force dut.vio_addr_num=length;
+    force dut.addr_compare_count=count;
     force dut.loop_idx=index;force dut.loop_count=loops;
     force dut.rd_en_d=phase_d;force dut.rd_en_d2=phase_d2;
     force dut.spi_t_gl2gh_w=unit_gl_w;force dut.spi_t_gl2gh_r=unit_gl_r;
@@ -266,7 +271,8 @@ module tb_top_predicates;
   task check;
     begin
       #1;cases=cases+1;
-      if(slice_less7 !== (count[6:0]<length[6:0]) ||
+      if(dut.u_spi_protocol.tx_more_bytes !== (unit_tx_pointer < (unit_tx_length-1)) ||
+         slice_less7 !== (count[6:0]<length[6:0]) ||
          slice_less9 !== (count[8:0]<length[8:0]) ||
          dut.loop_idx_inc !== (index+32'd1) ||
          dut.addr_cnt_inc !== ((count+32'd1) & 32'h007fffff) ||
@@ -346,6 +352,9 @@ module tb_top_predicates;
     // every 7-bit pair, while the controller predicates remain checked too.
     for(n=0;n<512;n=n+1) begin
       for(k=0;k<512;k=k+1) begin count=n;length=k;check;end
+    end
+    for(n=0;n<32;n=n+1) begin
+      for(k=0;k<32;k=k+1) begin unit_tx_length=n;unit_tx_pointer=k;check;end
     end
     $display("PASS: %0d predicate comparisons against original arithmetic, including unequal banks and GN underflow",cases);
     $finish;

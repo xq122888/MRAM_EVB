@@ -17,9 +17,9 @@ module tb_top_detail;
   reg [15:0] captured_expected;
   integer captured_loop,captured_index;
   reg prior_stall=0;
-  reg [337:0] prior_state;
+  reg [360:0] prior_state;
   reg [21:0] reference_address=0;
-  wire [337:0] memory_state={dut.dq_drive,dut.dq_write_data,dut.hold_release_count,dut.hold_sample_count,dut.dout_ref_addr,dut.addr,dut.addr_d,dut.addr_cnt,dut.addr_hold_cnt,
+  wire [360:0] memory_state={dut.addr_compare_count,dut.dq_drive,dut.dq_write_data,dut.hold_release_count,dut.hold_sample_count,dut.dout_ref_addr,dut.addr,dut.addr_d,dut.addr_cnt,dut.addr_hold_cnt,
     dut.rd_en,dut.rd_en_d,dut.rd_en_d2,dut.R_EN,dut.R_WN,dut.R_GN,dut.R_UBN,
     dut.R_LBN,dut.R_DQ,dut.dout,dut.dout_d1,dut.dout_d2,dut.dout_ref,
     dut.keep,dut.flg,dut.random_seed,dut.random_state};
@@ -62,6 +62,7 @@ module tb_top_detail;
     end
     #1;
     if(active && rst_n) begin
+      if(dut.addr_compare_count!==dut.addr_cnt) $fatal(1,"Address replica diverged during detail control");
       if(dut.hold_release_count!==dut.addr_hold_cnt || dut.hold_sample_count!==dut.addr_hold_cnt)
         $fatal(1,"Timer replicas diverged during detail/start/loop control");
       if(detected && (dut.error_addr_snapshot!==captured_address ||

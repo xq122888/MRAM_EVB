@@ -52,6 +52,7 @@ module tb_random_pattern;
   end
   always @(posedge clk) begin
     if(active && rst_n) begin
+      if(dut.addr_compare_count!==dut.addr_cnt) $fatal(1,"Random address replica diverged");
       if(dut.send_frame_ack) acks=acks+1;
       if(dut.random_seed_wait) begin
         seed_wait_cycles=seed_wait_cycles+1;

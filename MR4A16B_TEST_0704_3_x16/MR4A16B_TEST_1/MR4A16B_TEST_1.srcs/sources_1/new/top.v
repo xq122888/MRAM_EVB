@@ -169,7 +169,10 @@ wire [15:0] error_expected_snapshot = error_uses_reference ? error_ref_sample : 
 
 (* extract_enable="no" *) reg [21:0] addr;
 reg [21:0]  addr_d;                                 
-(*mark_debug="true"*)reg [22:0]  addr_cnt;
+(* mark_debug="true",keep="true",dont_touch="true" *) reg [22:0] addr_cnt;
+// Same-edge comparison copy: isolate range/terminal logic from address-data
+// and ILA loads without introducing a pipeline or changing the count value.
+(* keep="true",dont_touch="true" *) reg [22:0] addr_compare_count;
 reg [22:0]  addr_cnt_d;                                                        
 // Separate synchronous copies place timer loads near the control, pin-release,
 // and error/IO-assertion logic. Each copy executes the SAME update on the SAME
@@ -244,13 +247,13 @@ wire hold_one_w = hold_one_w_equal;
 wire hold_one_r = hold_one_r_equal;
 wire hold_two_w = hold_two_w_equal;
 wire hold_two_r = hold_two_r_equal;
-wire hold_before_one = hold_one_r || hold_one_w;
-wire hold_before_two = hold_two_r || hold_two_w;
+(* keep="true" *) wire hold_before_one = hold_one_r || hold_one_w;
+(* keep="true" *) wire hold_before_two = hold_two_r || hold_two_w;
 wire period_w_match;
 mram_equal_lut #(.WIDTH(22)) eq_period_w(.a({rd_en_d2,addr_hold_cnt}),.b({1'b0,5'b0,spi_t_avav_w}),.match(period_w_match));
 wire period_r_match;
 mram_equal_lut #(.WIDTH(22)) eq_period_r(.a({rd_en_d2,addr_hold_cnt}),.b({1'b1,5'b0,spi_t_avav_r}),.match(period_r_match));
-wire period_match = period_r_match || period_w_match;
+(* keep="true" *) wire period_match = period_r_match || period_w_match;
 (* keep = "true" *) wire early_w_match;
 mram_equal_lut eq_early_w(.a(hold_sample_count),.b(spi_compare_early_w),.match(early_w_match));
 (* keep = "true" *) wire early_r_match;
@@ -286,7 +289,7 @@ mram_equal_lut eq_late(.a(hold_sample_count),.b({5'b0,spi_t_avqv_r}),.match(late
 wire current_is_initial, current_equals_address, addr_count_equal;
 mram_equal_lut #(.WIDTH(22)) eq_current_initial(.a(addr_d),.b({2'b0,vio_addr_ini}),.match(current_is_initial));
 mram_equal_lut #(.WIDTH(22)) eq_current_address(.a(addr_d),.b(addr),.match(current_equals_address));
-mram_equal_lut #(.WIDTH(23)) eq_count_length(.a(addr_cnt),.b({2'b0,vio_addr_num}),.match(addr_count_equal));
+mram_equal_lut #(.WIDTH(23)) eq_count_length(.a(addr_compare_count),.b({2'b0,vio_addr_num}),.match(addr_count_equal));
 wire actual_equals_reference, actual_equals_current;
 mram_equal_lut #(.WIDTH(16)) eq_actual_reference(.a(RD_DATA),.b(dout_ref),.match(actual_equals_reference));
 mram_equal_lut #(.WIDTH(16)) eq_actual_current(.a(RD_DATA),.b(dout_d1),.match(actual_equals_current));
@@ -294,15 +297,15 @@ mram_equal_lut #(.WIDTH(16)) eq_actual_current(.a(RD_DATA),.b(dout_d1),.match(ac
 // results in one LUT. Include the two upper counter bits in the high slice
 // so the original unsigned 23-bit-vs-21-bit relation is preserved.
 (* keep = "true" *) wire [2:0] count_less_slice, count_equal_slice;
-mram_less_lut #(.WIDTH(7)) lt_count_slice_0(.a(addr_cnt[6:0]),.b(vio_addr_num[6:0]),.less(count_less_slice[0]));
-assign count_equal_slice[0] = addr_cnt[6:0] == vio_addr_num[6:0];
-mram_less_lut #(.WIDTH(7)) lt_count_slice_1(.a(addr_cnt[13:7]),.b(vio_addr_num[13:7]),.less(count_less_slice[1]));
-assign count_equal_slice[1] = addr_cnt[13:7] == vio_addr_num[13:7];
-mram_less_lut #(.WIDTH(9)) lt_count_slice_2(.a(addr_cnt[22:14]),.b({2'b0,vio_addr_num[20:14]}),.less(count_less_slice[2]));
+mram_less_lut #(.WIDTH(7)) lt_count_slice_0(.a(addr_compare_count[6:0]),.b(vio_addr_num[6:0]),.less(count_less_slice[0]));
+assign count_equal_slice[0] = addr_compare_count[6:0] == vio_addr_num[6:0];
+mram_less_lut #(.WIDTH(7)) lt_count_slice_1(.a(addr_compare_count[13:7]),.b(vio_addr_num[13:7]),.less(count_less_slice[1]));
+assign count_equal_slice[1] = addr_compare_count[13:7] == vio_addr_num[13:7];
+mram_less_lut #(.WIDTH(9)) lt_count_slice_2(.a(addr_compare_count[22:14]),.b({2'b0,vio_addr_num[20:14]}),.less(count_less_slice[2]));
 // The reported high-slice equality used a CARRY4 before address selection.
 // A three-group LUT equality keeps that reduction out of the carry chain.
 mram_equal_lut #(.WIDTH(9)) eq_count_high_slice(
-    .a(addr_cnt[22:14]),.b({2'b0,vio_addr_num[20:14]}),.match(count_equal_slice[2]));
+    .a(addr_compare_count[22:14]),.b({2'b0,vio_addr_num[20:14]}),.match(count_equal_slice[2]));
 wire addr_count_less = count_less_slice[2] ||
                       (count_equal_slice[2] && count_less_slice[1]) ||
                       (count_equal_slice[2] && count_equal_slice[1] && count_less_slice[0]);
@@ -313,10 +316,10 @@ generate
     genvar addr_group;
     for (addr_group=0; addr_group<7; addr_group=addr_group+1) begin : addr_terminal_compare
         assign addr_last_group[addr_group] =
-            (addr_cnt[addr_group*3 +: 3] == spi_last_test_address[addr_group*3 +: 3]);
+            (addr_compare_count[addr_group*3 +: 3] == spi_last_test_address[addr_group*3 +: 3]);
     end
 endgenerate
-assign addr_last_group[7] = (addr_cnt[22:21] == 2'b0);
+assign addr_last_group[7] = (addr_compare_count[22:21] == 2'b0);
 (* keep = "true" *) wire addr_last_low = &addr_last_group[3:0];
 (* keep = "true" *) wire addr_last_high = &addr_last_group[7:4];
 wire addr_is_last = (vio_addr_num != 21'd0) && addr_last_low && addr_last_high;
@@ -635,7 +638,7 @@ end
 // independently, so the period comparison need not also select every D bit.
 wire count_restart = (start_d1 != start_d2) || next_loop_start_d1;
 wire count_wrap = keep && addr_is_last;
-(* keep="true" *) wire count_update_enable = !detail_stall &&
+(* keep="true",max_fanout=24 *) wire count_update_enable = !detail_stall &&
     (count_restart || (hold_before_two && (count_wrap || addr_count_less)));
 wire count_clear_data = count_restart || count_wrap;
 always @(posedge clk or negedge rstn) begin
@@ -645,27 +648,37 @@ always @(posedge clk or negedge rstn) begin
         addr_cnt <= count_clear_data ? 23'd0 : addr_cnt_inc;
 end
 
+(* keep="true" *) wire [22:0] addr_compare_inc = addr_compare_count + 23'd1;
+always @(posedge clk or negedge rstn) begin
+    if (!rstn)
+        addr_compare_count <= 23'd0;
+    else if (count_update_enable)
+        addr_compare_count <= count_clear_data ? 23'd0 : addr_compare_inc;
+end
+
 
 //---
-// The two old load-one branches shared a period condition; combine their
-// events so stall/start/period control does not form a serial priority chain.
-wire hold_load_one = (next_loop_start_d2 && !next_loop_start_d3) ||
-                     (start_d2 && !start_d3) || (addr_count_less && period_match);
+// Factor start/period reinitialization before the data choice. High bits
+// clear together; only bit zero selects zero/one. Period matching no longer
+// passes through the load-one expression before clearing every counter bit.
+wire hold_restart_event = (next_loop_start_d2 && !next_loop_start_d3) ||
+                          (start_d2 && !start_d3);
+(* keep="true" *) wire hold_reinitialize = hold_restart_event || period_match;
+(* keep="true",max_fanout=24 *) wire hold_high_run =
+    !next_loop_start_d1 && !hold_restart_event && !period_match;
+wire hold_initial_bit = hold_restart_event || addr_count_less;
 (* keep="true" *) wire [20:0] addr_hold_cnt_inc = addr_hold_cnt + 21'd1;
 always @(posedge clk or negedge rstn) begin
     if (!rstn)
         addr_hold_cnt <= 21'd0;
     else if (!detail_stall) begin
+        addr_hold_cnt[20:1] <= {20{hold_high_run}} & addr_hold_cnt_inc[20:1];
         if (next_loop_start_d1)
-            addr_hold_cnt <= 21'd0;
-        else if (hold_load_one)
-            addr_hold_cnt <= 21'd1;
-        else if (period_match)
-            addr_hold_cnt <= 21'd0;
-        else if (|addr_hold_cnt)
-            addr_hold_cnt <= addr_hold_cnt_inc;
+            addr_hold_cnt[0] <= 1'b0;
+        else if (hold_reinitialize)
+            addr_hold_cnt[0] <= hold_initial_bit;
         else
-            addr_hold_cnt <= 21'd0;
+            addr_hold_cnt[0] <= (|addr_hold_cnt) && addr_hold_cnt_inc[0];
     end
 end
 
@@ -674,16 +687,13 @@ always @(posedge clk or negedge rstn) begin
     if (!rstn)
         hold_release_count <= 21'd0;
     else if (!detail_stall) begin
+        hold_release_count[20:1] <= {20{hold_high_run}} & hold_release_count_inc[20:1];
         if (next_loop_start_d1)
-            hold_release_count <= 21'd0;
-        else if (hold_load_one)
-            hold_release_count <= 21'd1;
-        else if (period_match)
-            hold_release_count <= 21'd0;
-        else if (|hold_release_count)
-            hold_release_count <= hold_release_count_inc;
+            hold_release_count[0] <= 1'b0;
+        else if (hold_reinitialize)
+            hold_release_count[0] <= hold_initial_bit;
         else
-            hold_release_count <= 21'd0;
+            hold_release_count[0] <= (|hold_release_count) && hold_release_count_inc[0];
     end
 end
 
@@ -692,16 +702,13 @@ always @(posedge clk or negedge rstn) begin
     if (!rstn)
         hold_sample_count <= 21'd0;
     else if (!detail_stall) begin
+        hold_sample_count[20:1] <= {20{hold_high_run}} & hold_sample_count_inc[20:1];
         if (next_loop_start_d1)
-            hold_sample_count <= 21'd0;
-        else if (hold_load_one)
-            hold_sample_count <= 21'd1;
-        else if (period_match)
-            hold_sample_count <= 21'd0;
-        else if (|hold_sample_count)
-            hold_sample_count <= hold_sample_count_inc;
+            hold_sample_count[0] <= 1'b0;
+        else if (hold_reinitialize)
+            hold_sample_count[0] <= hold_initial_bit;
         else
-            hold_sample_count <= 21'd0;
+            hold_sample_count[0] <= (|hold_sample_count) && hold_sample_count_inc[0];
     end
 end
 

@@ -27,6 +27,7 @@ proc mram_collect_spi_timing {repo_root} {
     puts $metadata "Detailed error mailbox registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *detail_pending_reg*}]]"
     puts $metadata "Predecoded error compare registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *compare_early_*reg*}]]"
     puts $metadata "Local period-counter replica registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *hold_release_count_reg* || NAME =~ *hold_sample_count_reg*}]]"
+    puts $metadata "Local address-comparison replica registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *addr_compare_count_reg*}]]"
     puts $metadata "Latched TRNG test-seed registers: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *random_test_seed_reg*}]]"
     puts $metadata "Physical RO loop nets matched: [llength [get_nets -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_bank*/ring*}]]"
     set ro_nets [get_nets -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_bank*/ring*}]

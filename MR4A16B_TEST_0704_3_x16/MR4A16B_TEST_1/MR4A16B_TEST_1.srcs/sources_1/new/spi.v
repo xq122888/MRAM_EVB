@@ -784,6 +784,10 @@ end
 // ---------- 8.4 SPI 移位发送状态机（全权管理所有移位相关寄存器） ----------
 reg [4:0]  tx_byte_ptr;
 reg [2:0]  tx_bit_cnt;
+// Keep the arithmetic five bits wide. Zero preserves the original unsigned
+// 32-bit underflow case; valid frames still contain 11, 17 or 25 bytes.
+wire tx_more_bytes = (tx_byte_cnt==5'd0) ||
+                     (tx_byte_ptr < (tx_byte_cnt-5'd1));
 reg [7:0]  tx_shift_reg;
 // Retain the observation point used by the existing MRAM testbench.
 wire       miso_out_pre = tx_shift_reg[7];
@@ -824,7 +828,7 @@ always @(posedge clk or negedge rst_n) begin
 
             if (tx_bit_cnt == 3'd7) begin
                 tx_bit_cnt <= 3'd0;
-                if (tx_byte_ptr < tx_byte_cnt - 1) begin
+                if (tx_more_bytes) begin
                     tx_byte_ptr  <= tx_byte_ptr + 1;
                     tx_shift_reg <= tx_buf[tx_byte_ptr + 1];
                 end else begin
