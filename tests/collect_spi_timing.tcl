@@ -29,6 +29,15 @@ proc mram_collect_spi_timing {repo_root} {
     puts $metadata "Local period-counter replica registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *hold_release_count_reg* || NAME =~ *hold_sample_count_reg*}]]"
     puts $metadata "Latched TRNG test-seed registers: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *random_test_seed_reg*}]]"
     puts $metadata "Physical RO loop nets matched: [llength [get_nets -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_bank*/ring*}]]"
+    set ro_nets [get_nets -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_bank*/ring*}]
+    set ro_acknowledged 0
+    foreach ro_net $ro_nets {
+        set ro_permission [get_property ALLOW_COMBINATORIAL_LOOPS $ro_net]
+        if {$ro_permission eq "1" || [string equal -nocase $ro_permission true]} {
+            incr ro_acknowledged
+        }
+    }
+    puts $metadata "Physical RO loop nets acknowledged: $ro_acknowledged/[llength $ro_nets]"
     puts $metadata "Entropy first-stage D pins matched: [llength [get_pins -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_meta_reg*/D}]]"
     puts $metadata "Note: checkout/run metadata does not prove the currently loaded checkpoint is fresh."
     close $metadata
@@ -36,6 +45,7 @@ proc mram_collect_spi_timing {repo_root} {
     set failures_path [file join $report_dir failures.rpt]
     set loops_path [file join $report_dir loop_idx.rpt]
     set cdc_path [file join $report_dir cdc.rpt]
+    set ro_drc_path [file join $report_dir ro_drc.rpt]
     report_timing_summary -delay_type min_max -report_unconstrained -max_paths 20 -file $summary_path
     report_timing -delay_type max -slack_lesser_than 0 -max_paths 1000 -file $failures_path
     report_timing -from $loop_regs -delay_type max -max_paths 100 -file $loops_path
@@ -45,9 +55,15 @@ proc mram_collect_spi_timing {repo_root} {
         close $failed_report
         puts "WARNING: CDC reporting failed; see the bundle. CDC is not validated."
     }
+    if {[catch {report_drc -checks [get_drc_checks LUTLP-1] -file $ro_drc_path} ro_drc_error]} {
+        set failed_report [open $ro_drc_path w]
+        puts $failed_report "RO loop DRC report generation failed: $ro_drc_error"
+        close $failed_report
+        puts "WARNING: RO loop DRC is not validated; see the bundle."
+    }
     set bundle_path [file join $repo_root timing_bundle_${stamp}.rpt]
     set bundle [open $bundle_path w]
-    foreach path [list $metadata_path $summary_path $failures_path $loops_path $cdc_path] {
+    foreach path [list $metadata_path $summary_path $failures_path $loops_path $cdc_path $ro_drc_path] {
         puts $bundle "\n===== [file tail $path] =====\n"
         set input_report [open $path r]
         puts $bundle [read $input_report]

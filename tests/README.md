@@ -3,6 +3,8 @@
 The TRNG-seeded random-data repair and its digital replay regression are documented
 in [random-pattern.md](random-pattern.md). Run `bash tests/run_random_pattern.sh`
 and `bash tests/run_trng_seed.sh` for seed handling, conditioning and health checks.
+Check the XDC command subset and debug-core construction order with
+`tclsh tests/check_xdc.tcl`; this is a smoke test, not a Vivado run.
 
 The 25-byte detailed-error reporting feature and its build/board checks are
 documented in [detailed-error-log.md](detailed-error-log.md). Run its additional
