@@ -52,6 +52,8 @@ module tb_random_pattern;
   end
   always @(posedge clk) begin
     if(active && rst_n) begin
+      if(dut.spi_detail_stall || (dut.detail_stall && !dut.random_seed_wait))
+        $fatal(1,"Logging paused the random-data engine");
       if(dut.addr_compare_count!==dut.addr_cnt) $fatal(1,"Random address replica diverged");
       if(dut.send_frame_ack) acks=acks+1;
       if(dut.random_seed_wait) begin
@@ -160,12 +162,12 @@ module tb_random_pattern;
         end
       end
       if(case_no==0 && seed_wait_cycles==0) $fatal(1,"Unready seed waiting was not exercised");
-      if(read_checks==0 || (fault_cfg && pauses==0)) $fatal(1,"Random coverage missing");
+      if(read_checks==0) $fatal(1,"Random coverage missing");
       $display("PASS random case %0d: period=%0d length=%0d chip=%h detail=%0d writes=%0d/%0d read checks=%0d",case_no,period_cfg,length_cfg,chip_cfg,detail_cfg,writes[0],writes[1],read_checks);
       active=0;
     end
     if(seeds_taken!=11) $fatal(1,"Seed consumed more than once per test");
-    $display("PASS: %0d pin-observed random writes, reproducible readback, odd/even lengths, x8/x16, >256 addresses, faults, pauses and same-mode restart",total_writes);
+    $display("PASS: %0d pin-observed random writes, reproducible readback, odd/even lengths, x8/x16, >256 addresses, faults without logging pauses, seed wait and same-mode restart",total_writes);
     $finish;
   end
   initial begin #15000000;$fatal(1,"Random pattern watchdog expired");end

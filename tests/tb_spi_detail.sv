@@ -12,7 +12,7 @@ module tb_spi_detail;
   reg [7:0] checksum;
   always #2.5 clk=~clk;
   always @(posedge clk) if(ack) acks=acks+1;
-  spi_protocol dut(.clk(clk),.rst_n(rst_n),.spi_sclk(sclk),.spi_cs_n(cs_n),
+  spi_protocol #(.DETAIL_FIFO_ADDR_BITS(3)) dut(.clk(clk),.rst_n(rst_n),.spi_sclk(sclk),.spi_cs_n(cs_n),
     .spi_mosi(mosi),.spi_miso(miso),.tx_done_pulse(ack),.detail_stall(stall),
     .current_loop(loop_no),.test_busy(busy),.test_done(1'b0),.error_cnt(error_count),
     .err_flag(error_valid),.error_addr(address),.error_data(actual),
@@ -101,23 +101,27 @@ module tb_spi_detail;
   initial begin
     #30;rst_n=1;#100;configure(1);
     emit_error(22'h312345,16'hbeef,16'hcafe);
-    if(!stall) $fatal(1,"Queued detail did not stall producer");
+    if(stall) $fatal(1,"Queued detail stalled producer");
     // Input buses move after capture; the pending packet must retain its record.
     address=0;actual=0;expected=0;
+    emit_error(22'h020001,16'h1234,16'h5678);
     notify;
-    poll(12);
-    if(!stall || acks!=0 || !dut.detail_pending) $fatal(1,"Aborted detail was consumed");
+    fork
+      begin poll(12);end
+      begin #500;emit_error(22'h020002,16'habcd,16'h4321);end
+    join
+    if(stall || acks!=0 || !dut.detail_pending) $fatal(1,"Aborted detail was consumed");
     poll(0);check_detail(1,22'h312345,16'hbeef,16'hcafe);
     if(acks!=0 || stall) $fatal(1,"Detail incorrectly ACKed a loop or retained backpressure");
     // Even with a pending completion, busy keeps the summary from overtaking
     // late errors; an otherwise empty poll must not ACK the loop.
-    poll(0);for(n=0;n<64;n=n+1) if(bytes[n]!==0) $fatal(1,"Busy summary transmitted early");
-    emit_error(22'h020001,16'h1234,16'h5678);
     poll(0);check_detail(2,22'h020001,16'h1234,16'h5678);
+    poll(0);check_detail(3,22'h020002,16'habcd,16'h4321);
     if(acks!=0) $fatal(1,"Second error ACKed loop");
+    poll(0);for(n=0;n<64;n=n+1) if(bytes[n]!==0) $fatal(1,"Busy summary transmitted early");
     busy=0;#100;
     poll(8);if(acks!=0 || !dut.pending_test_complete) $fatal(1,"Aborted summary was ACKed");
-    poll(0);check_summary(2);if(acks!=1) $fatal(1,"Summary did not ACK exactly once");
+    poll(0);check_summary(3);if(acks!=1) $fatal(1,"Summary did not ACK exactly once");
     poll(0);for(n=0;n<64;n=n+1) if(bytes[n]!==0) $fatal(1,"Completed frame replayed");
     if(acks!=1) $fatal(1,"Idle polling generated ACK");
     // New valid configuration discards an unsent record from the old test.
@@ -137,7 +141,34 @@ module tb_spi_detail;
     selected_mode=1;configure(1);emit_error(22'h000124,16'h5555,16'haaaa);
     if(stall || dut.detail_pending) $fatal(1,"Read mode incorrectly enabled detail logging");
     notify;poll(0);check_basic;if(acks!=5) $fatal(1,"Read mode ACK mismatch");
-    $display("PASS: %0d detailed frames; snapshots, 22-bit addresses, retry, ordering, restart, empty/off/basic modes, sticky summary and summary-only ACK",details);
+    // Saturation must not pause the producer or truncate the total count.
+    selected_mode=2;configure(1);busy=1;
+    for(n=0;n<12;n=n+1)emit_error(22'h200000+n,16'(n),16'(~n));
+    if(stall || !dut.detail_overflow || dut.detail_dropped_count!=4)
+      $fatal(1,"FIFO overflow did not count the four dropped records");
+    for(n=0;n<8;n=n+1)begin
+      poll(0);check_detail(n+1,22'h200000+n,16'(n),16'(~n));
+    end
+    // Once space is available, preserve the original index including dropped IDs.
+    emit_error(22'h20000c,16'h7777,16'h8888);
+    poll(0);check_detail(13,22'h20000c,16'h7777,16'h8888);
+    busy=0;notify;poll(0);check_summary(13);
+    if(acks!=6 || dut.detail_overflow || dut.detail_dropped_count)
+      $fatal(1,"Summary ACK did not reset per-loop queue diagnostics");
+    // A synchronous-RAM fetch leaves a short interval with queued data but no
+    // ready head. Completion must not overtake that data at this CS boundary.
+    configure(1);busy=1;notify;busy=0;
+    @(negedge clk);cs_n=0;
+    wait(dut.cs_n_sync==2'b10);
+    @(negedge clk);address=22'h2abcde;actual=16'h1357;expected=16'h2468;error_valid=1;
+    @(negedge clk);error_valid=0;error_count=1;
+    #100;for(n=0;n<64;n=n+1)byte_io(0,bytes[n]);
+    #100;cs_n=1;#100;
+    for(n=0;n<64;n=n+1)if(bytes[n]!==0)$fatal(1,"Summary overtook an in-flight RAM fetch");
+    if(acks!=6) $fatal(1,"Prefetch gap ACKed the loop");
+    poll(0);check_detail(1,22'h2abcde,16'h1357,16'h2468);
+    poll(0);check_summary(1);if(acks!=7)$fatal(1,"Prefetch-gap completion failed");
+    $display("PASS: %0d detailed frames; snapshots, 22-bit addresses, concurrent producer, retry, ordering, overflow accounting, index gaps, restart and summary-only ACK",details);
     $finish;
   end
   initial begin #5000000;$fatal(1,"Detailed protocol watchdog expired");end

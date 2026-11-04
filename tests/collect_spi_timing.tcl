@@ -24,7 +24,14 @@ proc mram_collect_spi_timing {repo_root} {
         }
     }
     puts $metadata "Decoded loop-limit registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *last_loop_index_reg*}]]"
-    puts $metadata "Detailed error mailbox registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *detail_pending_reg*}]]"
+    puts $metadata "Detailed FIFO head-valid registers: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *u_detail_fifo/head_valid_reg}]]"
+    puts $metadata "Detailed FIFO occupancy registers (default 13): [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *u_detail_fifo/fifo_count_reg*}]]"
+    set detail_rams [get_cells -quiet -hierarchical -filter {REF_NAME =~ RAMB* && NAME =~ *u_detail_fifo*}]
+    puts $metadata "Detailed FIFO inferred block RAMs: [llength $detail_rams]"
+    foreach detail_ram $detail_rams {
+        puts $metadata "DETAIL_FIFO_RAM $detail_ram REF=[get_property REF_NAME $detail_ram] LOC=[get_property LOC $detail_ram]"
+    }
+    puts $metadata "Detailed FIFO loss-counter registers: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *u_detail_fifo/dropped_count_reg*}]]"
     puts $metadata "Predecoded error compare registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *compare_early_*reg*}]]"
     puts $metadata "Local period-counter replica registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *hold_release_count_reg* || NAME =~ *hold_sample_count_reg*}]]"
     puts $metadata "Local address-comparison replica registers in loaded design: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *addr_compare_count_reg*}]]"
@@ -92,6 +99,7 @@ proc mram_collect_spi_timing {repo_root} {
     set loops_path [file join $report_dir loop_idx.rpt]
     set cdc_path [file join $report_dir cdc.rpt]
     set ro_drc_path [file join $report_dir ro_drc.rpt]
+    set utilization_path [file join $report_dir utilization.rpt]
     report_timing_summary -delay_type min_max -report_unconstrained -max_paths 20 -file $summary_path
     report_timing -delay_type max -slack_lesser_than 0 -max_paths 1000 -file $failures_path
     report_timing -from $loop_regs -delay_type max -max_paths 100 -file $loops_path
@@ -107,9 +115,14 @@ proc mram_collect_spi_timing {repo_root} {
         close $failed_report
         puts "WARNING: RO loop DRC is not validated; see the bundle."
     }
+    if {[catch {report_utilization -file $utilization_path} utilization_error]} {
+        set failed_report [open $utilization_path w]
+        puts $failed_report "Resource report generation failed: $utilization_error"
+        close $failed_report
+    }
     set bundle_path [file join $repo_root timing_bundle_${stamp}.rpt]
     set bundle [open $bundle_path w]
-    foreach path [list $metadata_path $summary_path $failures_path $loops_path $cdc_path $ro_drc_path] {
+    foreach path [list $metadata_path $summary_path $failures_path $loops_path $cdc_path $ro_drc_path $utilization_path] {
         puts $bundle "\n===== [file tail $path] =====\n"
         set input_report [open $path r]
         puts $bundle [read $input_report]

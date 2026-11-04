@@ -125,7 +125,7 @@ foreach filename {timing.xdc debug.xdc} {
     interp invokehidden xdc source [file join $constr_dir $filename]
 }
 if {$loop_count != 45 || $meta_count != 5 || $hub_frequency != 200000000 ||
-    [llength [dict keys $ports u_ila_0/probe*]] != 32} {
+    [llength [dict keys $ports u_ila_0/probe*]] != 34} {
     error "Incomplete timing/debug configuration"
 }
 if {[lindex [dict get $connections u_ila_0/probe1] 0] ne {dq_read_data[0]} || [lindex [dict get $connections u_ila_0/probe1] 15] ne {dq_read_data[15]}} {
@@ -144,7 +144,11 @@ for {set bit 0} {$bit < 22} {incr bit} {
 foreach {probe net} {9 debug_en 13 debug_gn 15 debug_lbn 30 debug_ubn 31 debug_wn} {
     if {[dict get $connections u_ila_0/probe$probe] ne $net} {error "Control probe must observe a same-edge fabric copy"}
 }
+if {[dict get $connections u_ila_0/probe32] ne "detail_fifo_overflow"} {error "Missing FIFO overflow probe"}
+for {set bit 0} {$bit < 32} {incr bit} {
+    if {[lindex [dict get $connections u_ila_0/probe33] $bit] ne [format {detail_dropped_count[%d]} $bit]} {error "Missing dropped-record count bit"}
+}
 if {[dict get $connections u_ila_0/probe18] ne "spi_miso_OBUF"} {
     error "MISO probe must observe the actual protocol output"
 }
-puts "PASS: restricted XDC commands; 45 RO nets, 5 first-stage D pins, 32 ordered ILA probes, registered DQ input/output and 200 MHz debug clock"
+puts "PASS: restricted XDC commands; 45 RO nets, 5 first-stage D pins, 34 ordered ILA probes, registered DQ input/output and 200 MHz debug clock"

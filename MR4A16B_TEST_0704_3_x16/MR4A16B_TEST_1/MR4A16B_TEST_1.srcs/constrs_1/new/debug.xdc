@@ -141,6 +141,14 @@ create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe31]
 set_property port_width 1 [get_debug_ports u_ila_0/probe31]
 connect_debug_port u_ila_0/probe31 [get_nets [list debug_wn]]
+create_debug_port u_ila_0 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe32]
+set_property port_width 1 [get_debug_ports u_ila_0/probe32]
+connect_debug_port u_ila_0/probe32 [get_nets [list detail_fifo_overflow]]
+create_debug_port u_ila_0 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe33]
+set_property port_width 32 [get_debug_ports u_ila_0/probe33]
+connect_debug_port u_ila_0/probe33 [get_nets [list {detail_dropped_count[0]} {detail_dropped_count[1]} {detail_dropped_count[2]} {detail_dropped_count[3]} {detail_dropped_count[4]} {detail_dropped_count[5]} {detail_dropped_count[6]} {detail_dropped_count[7]} {detail_dropped_count[8]} {detail_dropped_count[9]} {detail_dropped_count[10]} {detail_dropped_count[11]} {detail_dropped_count[12]} {detail_dropped_count[13]} {detail_dropped_count[14]} {detail_dropped_count[15]} {detail_dropped_count[16]} {detail_dropped_count[17]} {detail_dropped_count[18]} {detail_dropped_count[19]} {detail_dropped_count[20]} {detail_dropped_count[21]} {detail_dropped_count[22]} {detail_dropped_count[23]} {detail_dropped_count[24]} {detail_dropped_count[25]} {detail_dropped_count[26]} {detail_dropped_count[27]} {detail_dropped_count[28]} {detail_dropped_count[29]} {detail_dropped_count[30]} {detail_dropped_count[31]}]]
 set_property C_CLK_INPUT_FREQ_HZ 200000000 [get_debug_cores dbg_hub]
 set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
 set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]

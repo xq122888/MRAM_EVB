@@ -5,7 +5,8 @@ module spi_protocol #(
     parameter SPI_FREQUENCE = 5_000_000,
     parameter DATA_WIDTH = 8,
     parameter CPOL = 0,   
-    parameter CPHA = 0    
+    parameter CPHA = 0,
+    parameter DETAIL_FIFO_ADDR_BITS = 12
 )(
     input  wire clk,
     input  wire rst_n,
@@ -88,8 +89,10 @@ module spi_protocol #(
     (*mark_debug="true"*)output reg stop_test,
     (*mark_debug="true"*)output reg stop_cmd_match,
     (*mark_debug="true"*)output reg tx_done_pulse,
-    // Backpressure for the error-event producer; only summary frames ACK loops.
+    // Nonblocking detail queue diagnostics; only summary frames ACK loops.
     output wire detail_stall,
+    output wire detail_overflow,
+    output wire [31:0] detail_dropped_count,
     input wire random_seed_ready,
     output reg start_waiting,
     
@@ -606,42 +609,30 @@ always @(posedge clk or negedge rst_n) begin
 end
 wire report_restart = start_test || valid_start_request || (|report_start_guard);
 reg        detail_frame_acked;
-reg        detail_pending;
-reg [31:0] detail_loop;
-reg [22:0] detail_total;
-reg [31:0] detail_index;
-reg [21:0] detail_address;
-reg [15:0] detail_actual;
-reg [15:0] detail_expected;
-// detail_enabled is committed with its base configuration above.
-// Include the incoming pulse so the producer freezes immediately after its
-// compare/snapshot edge, before this one-entry mailbox is written next cycle.
-assign detail_stall = detail_enabled && (detail_pending || err_flag);
-
-always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-        detail_pending <= 1'b0;
-        detail_loop <= 32'd0;
-        detail_total <= 23'd0;
-        detail_index <= 32'd0;
-        detail_address <= 22'd0;
-        detail_actual <= 16'd0;
-        detail_expected <= 16'd0;
-    end else if (config_commit || report_restart) begin
-        detail_pending <= 1'b0;
-    end else if (detail_enabled && err_flag && !detail_pending) begin
-        detail_pending <= 1'b1;
-        detail_loop <= current_loop;
-        detail_total <= test_length;
-        // error_cnt is updated by the producer on this same edge.
-        detail_index <= error_cnt + 32'd1;
-        detail_address <= error_addr;
-        detail_actual <= error_data;
-        detail_expected <= expected_data;
-    end else if (detail_frame_acked) begin
-        detail_pending <= 1'b0;
-    end
-end
+// The RAM holds the index/address/actual/expected payload (86 bits). One loop
+// is drained before its summary ACK advances current_loop, so common header
+// fields remain stable without duplicating them in every RAM entry.
+wire detail_pending;
+wire detail_fifo_nonempty;
+wire [85:0] detail_record;
+wire [31:0] detail_loop = current_loop;
+wire [22:0] detail_total = test_length;
+wire [31:0] detail_index = detail_record[85:54];
+wire [21:0] detail_address = detail_record[53:32];
+wire [15:0] detail_actual = detail_record[31:16];
+wire [15:0] detail_expected = detail_record[15:0];
+wire detail_fifo_clear = config_commit || report_restart || test_frame_acked;
+wire [31:0] incoming_detail_index = error_cnt + 32'd1;
+// Logging never exerts backpressure on the memory engine, even when full.
+assign detail_stall = 1'b0;
+mram_detail_fifo #(.ADDR_BITS(DETAIL_FIFO_ADDR_BITS)) u_detail_fifo(
+    .clk(clk),.rst_n(rst_n),.clear(detail_fifo_clear),
+    .push(detail_enabled && err_flag),
+    .push_data({incoming_detail_index,error_addr,error_data,expected_data}),
+    .pop(detail_frame_acked),.head_valid(detail_pending),.head_data(detail_record),
+    .nonempty(detail_fifo_nonempty),.overflow(detail_overflow),
+    .dropped_count(detail_dropped_count)
+);
 
 
 always @(posedge clk or negedge rst_n) begin
@@ -724,7 +715,7 @@ always @(posedge clk or negedge rst_n) begin
             // A loop-finish notification precedes the final compare pipeline
             // draining. Wait for the memory engine to be idle in either mode.
             end else if (!tx_sending && !frame_sent_this_cs && pending_test_complete && !test_busy &&
-                         (!detail_enabled || (!err_flag && !detail_pending))) begin
+                         (!detail_enabled || (!err_flag && !detail_fifo_nonempty))) begin
                 tx_is_detail <= 1'b0;
                 // Ìî³ä»º³åÇø
                 tx_buf[0] <= 8'h55;
@@ -848,4 +839,59 @@ end
 // select and both data inputs change on the same clk edge at byte boundaries.
 assign spi_miso = (!spi_cs_n && tx_sending) ? tx_shift_reg[7] : 1'b0;
 
+endmodule
+
+// Single-clock, BRAM-compatible detail queue. The prefetched head remains part
+// of fifo_count until a FULL SPI frame ACKs it; aborted polls cannot consume it.
+module mram_detail_fifo #(parameter ADDR_BITS=12)(
+    input wire clk,rst_n,clear,push,pop,
+    input wire [85:0] push_data,
+    output reg head_valid,
+    output reg [85:0] head_data,
+    output wire nonempty,
+    output reg overflow,
+    output reg [31:0] dropped_count
+);
+localparam integer DEPTH = 1 << ADDR_BITS;
+localparam [ADDR_BITS:0] CAPACITY = {1'b1,{ADDR_BITS{1'b0}}};
+(* ram_style="block" *) reg [85:0] records [0:DEPTH-1];
+reg [ADDR_BITS-1:0] write_pointer,read_pointer;
+reg [ADDR_BITS:0] fifo_count;
+reg fetch_pending;
+reg [85:0] ram_output;
+wire full = (fifo_count==CAPACITY);
+assign nonempty = (fifo_count!=0);
+wire pop_ok = pop && head_valid;
+wire push_ok = push && (!full || pop_ok);
+wire fetch = nonempty && !head_valid && !fetch_pending;
+// No reset on RAM or its read register: infer true synchronous block RAM.
+always @(posedge clk) begin
+    if(rst_n && !clear) begin
+        if(push_ok) records[write_pointer]<=push_data;
+        if(fetch) ram_output<=records[read_pointer];
+    end
+end
+always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        write_pointer<=0;read_pointer<=0;fifo_count<=0;
+        head_valid<=0;head_data<=0;fetch_pending<=0;
+        overflow<=0;dropped_count<=0;
+    end else if(clear) begin
+        write_pointer<=0;read_pointer<=0;fifo_count<=0;
+        head_valid<=0;fetch_pending<=0;overflow<=0;dropped_count<=0;
+    end else begin
+        if(push_ok) write_pointer<=write_pointer+1'b1;
+        if(pop_ok) begin read_pointer<=read_pointer+1'b1;head_valid<=0;end
+        case({push_ok,pop_ok})
+            2'b10:fifo_count<=fifo_count+1'b1;
+            2'b01:fifo_count<=fifo_count-1'b1;
+            default:;
+        endcase
+        if(fetch) fetch_pending<=1;
+        if(fetch_pending) begin
+            head_data<=ram_output;head_valid<=1;fetch_pending<=0;
+        end
+        if(push && !push_ok) begin overflow<=1;dropped_count<=dropped_count+32'd1;end
+    end
+end
 endmodule

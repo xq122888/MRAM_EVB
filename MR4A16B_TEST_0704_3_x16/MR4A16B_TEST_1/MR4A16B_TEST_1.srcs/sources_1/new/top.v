@@ -167,6 +167,8 @@ reg [15:0]  dout_d2;
 reg [15:0]  dout_ref;
 reg [21:0] dout_ref_addr;
 wire spi_detail_stall;
+(* mark_debug="true" *) wire detail_fifo_overflow;
+(* mark_debug="true" *) wire [31:0] detail_dropped_count;
 (* mark_debug="true" *) wire random_seed_wait;
 wire detail_stall = spi_detail_stall || random_seed_wait;
 (* mark_debug="true" *) wire trng_seed_ready,trng_seed_fault;
@@ -425,6 +427,8 @@ spi_protocol u_spi_protocol (
     .start_test(spi_start_test),
     .tx_done_pulse(send_frame_ack),
     .detail_stall(spi_detail_stall),
+    .detail_overflow(detail_fifo_overflow),
+    .detail_dropped_count(detail_dropped_count),
     .random_seed_ready(trng_seed_ready),
     .start_waiting(random_seed_wait),
     

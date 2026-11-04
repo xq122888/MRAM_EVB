@@ -1,5 +1,11 @@
 # SPI report regression
 
+Current detailed errors use a 4096-entry BRAM FIFO: logging never stalls an
+active MRAM access, including on overflow. Total errors remain complete; ILA
+probes 32/33 expose overflow and dropped-record count. See
+[detailed-error-log.md](detailed-error-log.md) for the unchanged wire format,
+queue/round boundaries, and host-side loss reconciliation.
+
 Current MRAM first-cycle/loop-restart pin fixes and their waveform contract are
 documented in [mram-pin-timing.md](mram-pin-timing.md). Run
 `bash tests/run_top_timing.sh` for independent pin checks, arithmetic boundaries
