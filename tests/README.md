@@ -1,5 +1,10 @@
 # SPI report regression
 
+For the reported one-write-pulse/timeout board symptom on 6f8978a, see
+[spi-port-repro.md](spi-port-repro.md). The port-only reproduction covers the
+exact four-address CEN/Read1 50 ns configuration and can be run against Vivado's
+implemented netlist. Its RTL pass is diagnostic evidence, not a hardware fix.
+
 The 6c84918 routed report still fails at 200 MHz. See
 [timing-20261105-154229.md](timing-20261105-154229.md) for the measured violations
 and the register-stage changes that require a new Vivado build and report.
