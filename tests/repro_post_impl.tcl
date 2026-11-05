@@ -39,7 +39,8 @@ proc mram_repro_post_impl {repo_root} {
     set_property xsim.simulate.runtime all $simset
     update_compile_order -fileset $sim_name
     puts "Running port-only post-implementation functional simulation (patterns 1-8)."
-    puts "Expected: 8/8 writes for patterns 1/2; 4 writes for patterns 3-8; one summary per command."
+    puts "Configurations: N=4 CEN/Read1 and N=2 WEN/Read2, both at 50 ns."
+    puts "Expected: two complete write/read pairs for patterns 1/2; one pair for patterns 3-8; 60 writes and 16 summaries total."
     # Production RO entropy cannot be validated in functional simulation.
     # Pattern 9 is exercised by the cloud RTL runner with its labelled seed fixture.
     launch_simulation -simset $sim_name -mode post-implementation -type functional

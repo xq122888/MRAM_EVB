@@ -12,9 +12,9 @@ module tb_spi_port_repro;
   reg [7:0] cfg[0:23],bytes[0:63],unused,checksum;
   integer pattern_cfg=1,read_pass=0,write_count=0,details=0,polls=0;
   integer pat,last_pattern=8,all_writes=0,all_summaries=0,i,idx,expected_writes;
-  integer pin_log;
+  integer pin_log,variant,nwords=4,write_cfg=0,read_cfg=0;
   reg summary_seen=0;
-  realtime window_begin,wn_low_time;
+  realtime window_begin,wn_low_time,ce_low_time;
   wire chip_output=!en && wn && !gn && (!ub || !lb);
   wire chip_output_hold;
   wire write_window=!en && !wn && (!ub || !lb);
@@ -37,29 +37,37 @@ module tb_spi_port_repro;
     endcase
   endfunction
   always @(negedge wn) if(checking) wn_low_time=$realtime;
+  always @(negedge en) if(checking) ce_low_time=$realtime;
   always @(posedge write_window) if(checking) begin
     window_begin=$realtime;
-    if(($realtime-wn_low_time)<4.99 || ($realtime-wn_low_time)>5.01 || gn!==1)
-      $fatal(1,"CEN write setup invalid pattern=%0d address=%h",pattern_cfg,address);
+    if(($realtime-(write_cfg==0?wn_low_time:ce_low_time))<4.99 ||
+       ($realtime-(write_cfg==0?wn_low_time:ce_low_time))>5.01 || gn!==1)
+      $fatal(1,"Write setup invalid pattern=%0d address=%h",pattern_cfg,address);
   end
   always @(negedge write_window) if(checking && rst_n) begin
-    idx=write_count%4;
+    idx=write_count%nwords;
     if(address!==idx || write_count>=expected_writes || gn!==1)
       $fatal(1,"Write address/count/order pattern=%0d write=%0d A=%h",pattern_cfg,write_count,address);
     if(($realtime-window_begin)<29.99 || ($realtime-window_begin)>30.01)
-      $fatal(1,"CEN pulse width is not 30 ns for 50 ns cycle");
+      $fatal(1,"Write pulse width is not 30 ns for 50 ns cycle");
     if((^dq)===1'bx) $fatal(1,"Undriven/contended write DQ pattern=%0d A=%h",pattern_cfg,address);
-    if(pattern_cfg!=9 && dq!==golden(pattern_cfg,idx,write_count/4))
-      $fatal(1,"Write data mismatch pattern=%0d A=%h got=%h expected=%h",pattern_cfg,address,dq,golden(pattern_cfg,idx,write_count/4));
+    if(pattern_cfg!=9 && dq!==golden(pattern_cfg,idx,write_count/nwords))
+      $fatal(1,"Write data mismatch pattern=%0d A=%h got=%h expected=%h",pattern_cfg,address,dq,golden(pattern_cfg,idx,write_count/nwords));
     memory[idx]=dq;memory_changed=~memory_changed;
     write_count=write_count+1;all_writes=all_writes+1;
   end
-  always @(negedge gn) if(checking && rst_n) read_pass=read_pass+1;
+  always @(negedge gn) if(checking && rst_n) begin
+    if(write_count!=nwords*(1+((read_cfg==1)?read_pass/nwords:read_pass)))
+      $fatal(1,"Read enabled before complete write pass: pattern=%0d N=%0d writes=%0d read-edge=%0d A=%h",pattern_cfg,nwords,write_count,read_pass,address);
+    if(address!==((read_cfg==1)?read_pass%nwords:0))
+      $fatal(1,"Wrong first/next read address: pattern=%0d read-edge=%0d A=%h",pattern_cfg,read_pass,address);
+    read_pass=read_pass+1;
+  end
   always @(address or memory_changed or read_pass) begin
-    if(address<4) begin
+    if(address<nwords) begin
       // Reproduce the user's single first-background detail: FFFF vs 0000
       // for pattern 1, and the inverse for pattern 2. The test must still finish.
-      read_value <= #35 (memory[address] ^ ((pattern_cfg<=2 && read_pass==1 && address==0)?16'hffff:16'h0000));
+      read_value <= #35 (memory[address] ^ ((pattern_cfg<=2 && read_pass>=1 && ((read_cfg==1)?((read_pass-1)/nwords==0):(read_pass==1)) && address==0)?16'hffff:16'h0000));
     end else read_value <= #35 16'hdead;
   end
   task byte_io(input [7:0] value,output [7:0] result);
@@ -70,7 +78,7 @@ module tb_spi_port_repro;
     begin
       for(i=0;i<24;i=i+1)cfg[i]=0;
       cfg[0]=8'h55;cfg[1]=8'h83;cfg[2]=2;cfg[3]=pattern_cfg;
-      cfg[8]=4;cfg[12]=1;cfg[16]=10;cfg[17]=0;cfg[18]=0;cfg[19]=1;
+      cfg[8]=nwords;cfg[12]=1;cfg[16]=10;cfg[17]=write_cfg;cfg[18]=read_cfg;cfg[19]=1;
       checksum=0;for(i=1;i<=21;i=i+1)checksum=checksum+cfg[i];cfg[22]=checksum;cfg[23]=8'haa;
       cs_n=0;#100;for(i=0;i<24;i=i+1)byte_io(cfg[i],unused);#100;cs_n=1;#200;
     end
@@ -87,7 +95,7 @@ module tb_spi_port_repro;
   task run_pattern(input integer pat);
     begin
       checking=0;pattern_cfg=pat;read_pass=0;write_count=0;details=0;polls=0;summary_seen=0;
-      expected_writes=(pat<=2)?8:4;
+      expected_writes=nwords*((pat<=2)?2:1);
       checking=1;configure;
       while(!summary_seen && polls<12) begin
         poll;polls=polls+1;
@@ -95,7 +103,7 @@ module tb_spi_port_repro;
           for(i=0;i<64;i=i+1)if(bytes[i]!==0)$fatal(1,"Partial idle report");
         end else if(bytes[0]!==8'h55 || bytes[2]!==8'hff ||
                     {bytes[6],bytes[5],bytes[4],bytes[3]}!==0 ||
-                    {bytes[10],bytes[9],bytes[8],bytes[7]}!==4)
+                    {bytes[10],bytes[9],bytes[8],bytes[7]}!==nwords)
           $fatal(1,"Wrong report header pattern=%0d",pat);
         else if(bytes[1]==8'h19) begin
           if(pat>2 || details!=0 || {bytes[15],bytes[14],bytes[13],bytes[12]}!==1 ||
@@ -111,10 +119,10 @@ module tb_spi_port_repro;
           summary_seen=1;
         end else $fatal(1,"Unexpected report type %h",bytes[1]);
       end
-      if(!summary_seen || write_count!=expected_writes || read_pass!=((pat<=2)?2:1))
+      if(!summary_seen || write_count!=expected_writes || read_pass!=((pat<=2)?2:1)*((read_cfg==1)?nwords:1))
         $fatal(1,"Timeout/incomplete pattern=%0d writes=%0d/%0d read-passes=%0d polls=%0d CE/WE/OE=%b%b%b",pat,write_count,expected_writes,read_pass,polls,en,wn,gn);
       #500;checking=0;all_summaries=all_summaries+1;
-      $display("PASS port pattern %0d: base=0 N=4 CEN/Read1 50ns writes=%0d read-passes=%0d details=%0d summary=1",pat,write_count,read_pass,details);$fflush();
+      $display("PASS port pattern %0d: base=0 N=%0d write=%0d read=%0d 50ns writes=%0d read-enable-edges=%0d details=%0d summary=1",pat,nwords,write_cfg,read_cfg,write_count,read_pass,details);$fflush();
     end
   endtask
   initial begin
@@ -124,13 +132,16 @@ module tb_spi_port_repro;
     memory[0]=16'hd849;memory[1]=16'h5555;memory[2]=16'haaaa;memory[3]=16'h5555;
     #100;rst_n=1;#10000; // Also allows the real MMCM to lock in Vivado simulation.
     if($test$plusargs("with_random"))last_pattern=9;
-    for(pat=1;pat<=last_pattern;pat=pat+1)run_pattern(pat);
-    if(last_pattern==9)begin
-      // Completed cross-type restarts in both directions, without board reset.
-      run_pattern(1);run_pattern(2);run_pattern(9);run_pattern(3);
+    for(variant=0;variant<2;variant=variant+1)begin
+      nwords=variant?2:4;write_cfg=variant;read_cfg=variant;
+      for(pat=1;pat<=last_pattern;pat=pat+1)run_pattern(pat);
+      if(last_pattern==9)begin
+        // Completed cross-type restarts in both directions, without board reset.
+        run_pattern(1);run_pattern(2);run_pattern(9);run_pattern(3);
+      end
     end
     $display("PASS port-only reproduction: %0d patterns, %0d writes, %0d summaries; no reset between commands, immediate SPI polling, first-background error retained",last_pattern,all_writes,all_summaries);
     $fclose(pin_log);$finish;
   end
-  initial begin #10000000;$fatal(1,"Port reproduction watchdog expired pattern=%0d writes=%0d",pattern_cfg,write_count);end
+  initial begin #20000000;$fatal(1,"Port reproduction watchdog expired pattern=%0d writes=%0d",pattern_cfg,write_count);end
 endmodule
