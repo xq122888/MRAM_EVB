@@ -287,7 +287,7 @@ always @(posedge clk or negedge rst_n) begin
                 end
                 
                 22: begin
-                    if (calc_checksum == spi_rx_data)
+                    if (calc_checksum == spi_rx_data && pattern_configuration_supported)
                         checksum_ok <= 1'b1;
                     else
                         checksum_ok <= 1'b0;
@@ -315,6 +315,10 @@ end
 
 // A random-mode request waits for one complete fresh TRNG seed. Non-random
 // modes retain the original tail-to-start timing. Never use a constant fallback.
+// March C is a new x16-only algorithm for the standalone write/read modes.
+// Reject unsupported combinations atomically: no live configuration or start.
+wire pattern_configuration_supported = (din_sel_reg!=8'd10) ||
+    ((chip_type_reg!=8'h80 && chip_type_reg!=8'h82) && t_mode_reg<4'd2);
 wire valid_start_request = spi_data_valid_d2 && !timeout_detected &&
     (rx_state==5'd23) && (spi_rx_data==FRAME_TAIL) && checksum_ok;
 wire start_permitted = (data_pattern!=8'd9) || random_seed_ready;
@@ -412,7 +416,7 @@ always @(posedge clk or negedge rst_n) begin
         config_commit <= 1'b0;
     else
         config_commit <= spi_data_valid_d2 && (rx_state == 5'd22) &&
-                         (calc_checksum == spi_rx_data);
+                         (calc_checksum == spi_rx_data) && pattern_configuration_supported;
 end
 
 always @(posedge clk or negedge rst_n) begin
@@ -504,7 +508,7 @@ always @(posedge clk or negedge rst_n) begin
         t_avav_w         <= t_avav_reg;
         t_avav_r         <= commit_read_period;
         err_detail_print <= err_detail_print_reg;
-        detail_enabled <= (t_mode_reg == 4'd2) && (err_detail_print_reg == 8'd1);
+        detail_enabled <= ((t_mode_reg == 4'd2) || (din_sel_reg==8'd10)) && (err_detail_print_reg == 8'd1);
         period_has_one_w <= (commit_write_period >= 16'd1);
         period_has_one_r <= (commit_read_period >= 16'd1);
         period_has_two_w <= (commit_write_period >= 16'd2);
@@ -729,7 +733,7 @@ always @(posedge clk or negedge rst_n) begin
                 tx_is_detail <= 1'b0;
                 // Ìî³ä»º³åÇø
                 tx_buf[0] <= 8'h55;
-                if (test_mode == 2'd2) begin
+                if (test_mode == 2'd2 || data_pattern==8'd10) begin
                     tx_buf[1]  <= 8'h11;
                     tx_buf[2]  <= 8'hFF;
                     tx_buf[3]  <= current_loop[7:0];

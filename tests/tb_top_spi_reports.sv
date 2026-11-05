@@ -9,7 +9,9 @@ module tb_top_spi_reports;
   integer mode,n,b,seq_no,count,reports=0;
   reg [7:0] checksum,received,expected;
   always #2.5 clk=~clk;
-  assign dq=(!en && wn && !gn)?16'd0:16'hzzzz;
+  wire chip_output_hold;
+  assign #(0,10) chip_output_hold=(!en && wn && !gn);
+  assign dq=chip_output_hold?16'd0:16'hzzzz;
   top dut(.clkp(clk),.clkn(~clk),.rst_n(rst_n),.spi_sclk(sclk),
     .spi_cs_n(cs_n),.spi_mosi(mosi),.spi_miso(miso),.DQ(dq),
     .EN(en),.WN(wn),.GN(gn));
@@ -27,7 +29,7 @@ module tb_top_spi_reports;
     for(mode=0;mode<3;mode=mode+1) begin
       count=(mode==0)?4:3;
       for(n=0;n<24;n=n+1) cfg[n]=0;
-      cfg[0]=8'h55;cfg[1]=8'h83;cfg[2]=mode;cfg[3]=5;
+      cfg[0]=8'h55;cfg[1]=8'h83;cfg[2]=mode;cfg[3]=(mode==2)?5:1;
       cfg[8]=4;cfg[12]=count;cfg[16]=7;
       // Write/read mode exercises unequal periods: invalid-write fallback 10,
       // configured read period 7 (Read2 clamps it to 8). Other modes retain normal write mode 1.
@@ -47,7 +49,7 @@ module tb_top_spi_reports;
             case(n)
               0:expected=8'h55;1:expected=8'h11;2:expected=8'hff;
               3,4,5,6:expected=seq_no >> ((n-3)*8);
-              7:expected=4;16:expected=8'haa;
+              7:expected=4;11:expected=1;12:expected=2;16:expected=8'haa;
             endcase
           end else begin
             case(n)

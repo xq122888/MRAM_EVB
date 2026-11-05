@@ -28,6 +28,10 @@ module tb_top_detail;
   initial begin
     force dut.RD_DATA=injected_data;
   end
+  // Independent returned-data fixture for the new 0000/ffff address pattern.
+  always @(dut.A) begin
+    if(!faults) injected_data <= #35 ((dut.A-configured_start)%2 ? 16'hffff : 16'h0000);
+  end
   reg [42:0] expected_pad;
   always @(posedge clk) begin
     expected_pad={dut.pad_cmd_en,dut.pad_cmd_wn,dut.pad_cmd_gn,dut.pad_cmd_ubn,dut.pad_cmd_lbn,dut.pad_cmd_addr,dut.pad_cmd_dq_write};
@@ -47,10 +51,10 @@ module tb_top_detail;
       if(dut.detail_stall) $fatal(1,"Error logging paused the MRAM engine");
       if(!dut.detail_stall && !dut.read_pipeline_flush && dut.read_compare_valid) begin
         captured_address=configured_start+read_seen[dut.loop_idx];
-        captured_expected=16'd0;
+        captured_expected=(read_seen[dut.loop_idx]%2)?16'hffff:16'h0000;
         read_seen[dut.loop_idx]=read_seen[dut.loop_idx]+1;
         if(read_seen[dut.loop_idx]>length_cfg) $fatal(1,"Duplicate read sample");
-        detected=(injected_data!=16'd0);
+        detected=(injected_data!=captured_expected);
       end
       if(detected) begin
         captured_loop=dut.loop_idx;

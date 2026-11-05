@@ -106,7 +106,7 @@ module tb_mram_pins;
                     want_wn=want_en;want_bn=!(slot>=1 && slot<period_cfg-3);end
           endcase
           if(chip_cfg==8'h80) want_bn=0;
-          want_data=(offset%2==0)?16'h5a5a:16'ha5a5;
+          want_data=(chip_cfg==8'h80)?((offset%2==0)?16'h5a5a:16'ha5a5):((offset%2==0)?16'h5555:16'haaaa);
           if(dq!==want_data)
             $fatal(1,"Unprepared/contended write data case=%0d loop=%0d tick=%0d A=%h DQ=%h expected=%h",case_no,dut.loop_idx,tick,address,dq,want_data);
         end
@@ -115,7 +115,7 @@ module tb_mram_pins;
         if(read_phase && slot==0) begin
           sample_due[launched]=clock_no+((read_cfg==1)?9:8);
           sample_addr[launched]=base_cfg+offset;
-          sample_expected[launched]=(offset%2==0)?16'h5a5a:16'ha5a5;
+          sample_expected[launched]=(chip_cfg==8'h80)?((offset%2==0)?16'h5a5a:16'ha5a5):((offset%2==0)?16'h5555:16'haaaa);
           launched=launched+1;
         end
         if(read_phase && !dut.pad_read) $fatal(1,"Read bus direction lagged pin cycle");

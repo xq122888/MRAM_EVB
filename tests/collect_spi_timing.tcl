@@ -42,6 +42,8 @@ proc mram_collect_spi_timing {repo_root} {
     puts $metadata "MRAM IOB register candidates (expected 75): [llength $mram_io_regs]"
     puts $metadata "Registered output-command FFs (expected 44): [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *pad_cmd*reg*}]]"
     puts $metadata "Registered period-event FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *period_event_reg*}]]"
+    puts $metadata "Multi-pass/March algorithm FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *u_algorithm/*}]]"
+    puts $metadata "Algorithm phase FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *u_algorithm/phase_reg*}]]"
     puts $metadata "ILA/debug-hub cells (expected 0): [llength [get_cells -quiet -hierarchical -filter {NAME =~ u_ila_0 || NAME =~ u_ila_0/* || NAME =~ dbg_hub || NAME =~ dbg_hub/*}]]"
     puts $metadata "Inspect LOC/BEL below; IOB=TRUE alone does not prove packing."
     set placed_in_io 0
@@ -109,7 +111,7 @@ proc mram_collect_spi_timing {repo_root} {
     # A length-dependent board failure can expose a carry/address path even
     # when it is absent from the globally worst 1000 paths. Include positive
     # slack here too; this report is diagnostic and changes no constraints.
-    set address_regs [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && (NAME =~ *addr_cnt_reg* || NAME =~ *addr_compare_count_reg* || NAME =~ *addr_reg* || NAME =~ *pad_cmd_addr_reg*)}]
+    set address_regs [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && (NAME =~ *addr_cnt_reg* || NAME =~ *addr_compare_count_reg* || NAME =~ *addr_reg* || NAME =~ *pad_cmd_addr_reg* || NAME =~ *u_algorithm/operation_address_reg* || NAME =~ *u_algorithm/word_index_reg*)}]
     if {[llength $address_regs] != 0} {
         report_timing -from $address_regs -delay_type max -max_paths 100 -file $address_path
     } else {

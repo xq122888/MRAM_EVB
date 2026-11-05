@@ -1,5 +1,9 @@
 # SPI report regression
 
+The current x16 data table, two-background write/read tests and March C (11N)
+are defined in [data-patterns.md](data-patterns.md). Run
+`bash tests/run_data_patterns.sh` for the independent operation/pin-memory oracle.
+
 Current detailed errors use a 4096-entry BRAM FIFO: logging never stalls an
 active MRAM access, including on overflow. Total errors remain complete. ILA
 and debug_hub have now been removed at the user's request; host loss accounting
@@ -18,7 +22,8 @@ The TRNG-seeded random-data repair and its digital replay regression are documen
 in [random-pattern.md](random-pattern.md). Run `bash tests/run_random_pattern.sh`
 and `bash tests/run_trng_seed.sh` for seed handling, conditioning and health checks.
 The memory replay bench now covers lengths through 16385 words, all write/read
-modes, all data patterns, and the reported 592-word/50 ns configuration. See
+modes, patterns 3–9, and the reported 592-word/50 ns configuration. The separate
+data-pattern bench checks patterns 1/2, the full new x16 table and March C. See
 [length-boundary-diagnosis.md](length-boundary-diagnosis.md) for board evidence
 and limits. `bash tests/run_random_pattern.sh +repro_only` runs just the six
 592-word cases; `MRAM_TEST_SEED=c58ed660` selects the reconstructed log seed
