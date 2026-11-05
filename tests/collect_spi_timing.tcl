@@ -99,12 +99,24 @@ proc mram_collect_spi_timing {repo_root} {
     set summary_path [file join $report_dir summary.rpt]
     set failures_path [file join $report_dir failures.rpt]
     set loops_path [file join $report_dir loop_idx.rpt]
+    set address_path [file join $report_dir address_count.rpt]
     set cdc_path [file join $report_dir cdc.rpt]
     set ro_drc_path [file join $report_dir ro_drc.rpt]
     set utilization_path [file join $report_dir utilization.rpt]
     report_timing_summary -delay_type min_max -report_unconstrained -max_paths 20 -file $summary_path
     report_timing -delay_type max -slack_lesser_than 0 -max_paths 1000 -file $failures_path
     report_timing -from $loop_regs -delay_type max -max_paths 100 -file $loops_path
+    # A length-dependent board failure can expose a carry/address path even
+    # when it is absent from the globally worst 1000 paths. Include positive
+    # slack here too; this report is diagnostic and changes no constraints.
+    set address_regs [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && (NAME =~ *addr_cnt_reg* || NAME =~ *addr_compare_count_reg* || NAME =~ *addr_reg* || NAME =~ *pad_cmd_addr_reg*)}]
+    if {[llength $address_regs] != 0} {
+        report_timing -from $address_regs -delay_type max -max_paths 100 -file $address_path
+    } else {
+        set address_report [open $address_path w]
+        puts $address_report "No address/count FFs found in the loaded design. Address timing is not validated."
+        close $address_report
+    }
     if {[catch {report_cdc -details -file $cdc_path} cdc_error]} {
         set failed_report [open $cdc_path w]
         puts $failed_report "CDC report generation failed: $cdc_error"
@@ -124,7 +136,7 @@ proc mram_collect_spi_timing {repo_root} {
     }
     set bundle_path [file join $repo_root timing_bundle_${stamp}.rpt]
     set bundle [open $bundle_path w]
-    foreach path [list $metadata_path $summary_path $failures_path $loops_path $cdc_path $ro_drc_path $utilization_path] {
+    foreach path [list $metadata_path $summary_path $failures_path $loops_path $address_path $cdc_path $ro_drc_path $utilization_path] {
         puts $bundle "\n===== [file tail $path] =====\n"
         set input_report [open $path r]
         puts $bundle [read $input_report]

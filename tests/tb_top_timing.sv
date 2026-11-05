@@ -18,9 +18,16 @@ module mram_trng_seed(input clk,rst_n,take,output reg [31:0] seed_data,
                       output reg seed_ready,output wire health_fail);
   reg [13:0] wait_cycles;
   reg [31:0] next_value;
+  reg [31:0] fixture_seed=32'h6d2b79f5;
+  initial begin
+    if($value$plusargs("fixture_seed=%h",fixture_seed)) begin
+      if(fixture_seed==0 || fixture_seed==32'hffffffff)
+        $fatal(1,"Invalid digital fixture seed");
+    end
+  end
   assign health_fail=1'b0;
   always @(posedge clk or negedge rst_n) begin
-    if(!rst_n) begin seed_data<=32'h6d2b79f5;seed_ready<=0;wait_cycles<=0;end
+    if(!rst_n) begin seed_data<=fixture_seed;seed_ready<=0;wait_cycles<=0;end
     else if(take && seed_ready) begin
       next_value=seed_data^(seed_data<<13);
       next_value=next_value^(next_value>>17);

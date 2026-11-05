@@ -1,19 +1,23 @@
 `timescale 1ns/1ps
-// Digital replay test. Writes are captured from actual A/DQ/WN pins. During
+// Digital replay test. Writes are captured from actual A/DQ/control pins. During
 // the read pass an ideal bus supplies stored words with 35 ns address latency (5 ns before Read1 capture).
 // CE/OE analogue behaviour and physical MRAM timing are not modelled.
 module tb_random_pattern;
   reg clk=0,rst_n=0,sclk=0,cs_n=1,mosi=0,active=0;
   wire [21:0] address;
   wire [15:0] dq;
-  wire en,wn;
-  reg [15:0] memory[0:511],read_value=0;
-  reg [31:0] vectors[0:511];
+  wire en,wn,ubn,lbn;
+  localparam MAX_WORDS=32768, LEGACY_CASES=10, BOUNDARY_CASES=48, PATTERN_CASES=16, REPRO_CASES=6;
+  localparam CASES=LEGACY_CASES+BOUNDARY_CASES+PATTERN_CASES+REPRO_CASES;
+  reg [15:0] memory[0:MAX_WORDS-1],read_value=0;
+  reg [31:0] vectors[0:MAX_WORDS-1];
   reg [1023:0] vector_path;
   reg memory_changed=0;
   reg [7:0] cfg[0:23],bytes[0:63],unused,checksum;
-  integer writes[0:1],details[0:1],seen[0:1][0:511];
+  integer reads[0:1],writes[0:1],details[0:1],seen[0:1][0:MAX_WORDS-1];
+  integer first_case=0;
   integer case_no,period_cfg,length_cfg,chip_cfg,detail_cfg,fault_cfg;
+  integer pattern_cfg,write_cfg,read_cfg,boundary_no,loops_cfg;
   integer summaries=0,acks=0,total_writes=0,read_checks=0,pauses=0,seed_wait_cycles=0;
   integer seeds_taken=0,seed_base=0;
   reg [31:0] granted_seed;
@@ -22,23 +26,37 @@ module tb_random_pattern;
   reg [95:0] prior_random;
   reg [15:0] want,comparison_word;
   reg [21:0] comparison_address;
-  localparam [21:0] BASE=22'h12000;
+  reg [21:0] base_addr=22'h12000;
   always #2.5 clk=~clk;
   top dut(.clkp(clk),.clkn(~clk),.rst_n(rst_n),.spi_sclk(sclk),
     .spi_cs_n(cs_n),.spi_mosi(mosi),.spi_miso(miso),.A(address),
-    .DQ(dq),.EN(en),.WN(wn));
+    .DQ(dq),.EN(en),.WN(wn),.UBN(ubn),.LBN(lbn));
   assign dq=(dut.pad_read && dut.pad_active)?read_value:16'hzzzz;
   function [15:0] golden(input integer round_no,input integer offset);
     reg [31:0] value;
     begin
-      value=vectors[round_no+offset+seed_base];
+      case(pattern_cfg)
+        1: value=offset;
+        2: value=16'hffff-offset;
+        3: value=offset%2?16'ha5a5:16'h5a5a;
+        4: value=offset%2?16'h5a5a:16'ha5a5;
+        5: value=0;
+        6: value=16'hffff;
+        7: value=16'h5555;
+        8: value=16'haaaa;
+        default: value=vectors[round_no+offset+seed_base];
+      endcase
       golden=(chip_cfg==8'h80)?{value[7:0],value[7:0]}:value[15:0];
     end
   endfunction
-  always @(posedge wn) begin
-    if(active && rst_n && !en && !dut.pad_read && address>=BASE && address<BASE+length_cfg) begin
-      idx=address-BASE;loop_no=dut.loop_idx;
+  // Store on the first terminating edge of CE/WE/byte enables, covering
+  // CEN, WEN and UBN/LBN writes through the external pins.
+  wire write_window = !en && !wn && (!ubn || !lbn);
+  always @(negedge write_window) begin
+    if(active && rst_n && !dut.pad_read && address>=base_addr && address<base_addr+length_cfg) begin
+      idx=address-base_addr;loop_no=dut.loop_idx;
       if(loop_no>1 || seen[loop_no][idx]!=0) $fatal(1,"Duplicate/random write loop=%0d addr=%h data=%h count=%0d h=%0d rd=%b/%b/%b finish=%b keep=%b",loop_no,address,dq,dut.addr_cnt,dut.addr_hold_cnt,dut.rd_en,dut.rd_en_d,dut.rd_en_d2,dut.loop_finish,dut.keep);
+      if(idx!=writes[loop_no]) $fatal(1,"Write address order failed loop=%0d offset=%0d",loop_no,idx);
       want=golden(loop_no,idx);
       if(dq!==want) $fatal(1,"Random write loop=%0d offset=%0d got=%h expected=%h",loop_no,idx,dq,want);
       memory[idx]=dq;seen[loop_no][idx]=1;writes[loop_no]=writes[loop_no]+1;
@@ -46,8 +64,8 @@ module tb_random_pattern;
     end
   end
   always @(address or memory_changed) begin
-    if(address>=BASE && address<BASE+length_cfg)
-      read_value <= #35 (memory[address-BASE] ^ ((fault_cfg && address==BASE+2)?16'd1:16'd0));
+    if(address>=base_addr && address<base_addr+length_cfg)
+      read_value <= #35 (memory[address-base_addr] ^ ((fault_cfg && address==base_addr+2)?16'd1:16'd0));
     else read_value <= #35 16'd0;
   end
   always @(posedge clk) begin
@@ -60,7 +78,7 @@ module tb_random_pattern;
         seed_wait_cycles=seed_wait_cycles+1;
         if(dut.spi_start_test) $fatal(1,"Started while seed request remained pending");
       end
-      if(dut.spi_start_test) begin
+      if(dut.spi_start_test && pattern_cfg==9) begin
         if(!dut.trng_seed_ready || dut.trng_seed_fault || dut.trng_seed_data==0)
           $fatal(1,"Random start lacked a fresh nonzero seed");
         granted_seed=dut.trng_seed_data;seeds_taken=seeds_taken+1;
@@ -69,14 +87,17 @@ module tb_random_pattern;
       if(!dut.detail_stall && !dut.read_pipeline_flush && dut.read_sample_valid) begin
         comparison_address=dut.read_due_0?dut.read_address_0:dut.read_address_1;
         comparison_word=dut.read_due_0?dut.read_expected_0:dut.read_expected_1;
-        if(comparison_address>=BASE && comparison_address<BASE+length_cfg) begin
-          if(comparison_word!==golden(dut.loop_idx,comparison_address-BASE))
+        if(comparison_address>=base_addr && comparison_address<base_addr+length_cfg) begin
+          if(dut.loop_idx>1 || comparison_address-base_addr!=reads[dut.loop_idx])
+            $fatal(1,"Read address order failed loop=%0d addr=%h",dut.loop_idx,comparison_address);
+          reads[dut.loop_idx]=reads[dut.loop_idx]+1;
+          if(comparison_word!==golden(dut.loop_idx,comparison_address-base_addr))
             $fatal(1,"Read expected word failed to replay written sequence addr=%h got=%h",comparison_address,comparison_word);
           read_checks=read_checks+1;
-        end
+        end else $fatal(1,"Read outside configured range addr=%h",comparison_address);
       end
       #1;
-      if(dut.start_d1 && dut.random_test_seed!==granted_seed)
+      if(pattern_cfg==9 && dut.start_d1 && dut.random_test_seed!==granted_seed)
         $fatal(1,"Start seed was not latched atomically");
       if(prior_stall && dut.detail_stall && {dut.random_seed,dut.random_state,dut.dout,16'd0}!==prior_random)
         $fatal(1,"PRNG advanced while detailed error was pending");
@@ -94,10 +115,10 @@ module tb_random_pattern;
   task configure;
     begin
       for(i=0;i<24;i=i+1) cfg[i]=0;
-      cfg[0]=8'h55;cfg[1]=chip_cfg;cfg[2]=2;cfg[3]=9;
-      cfg[4]=BASE[7:0];cfg[5]=BASE[15:8];cfg[6]=BASE[21:16];
-      cfg[8]=length_cfg[7:0];cfg[9]=length_cfg[15:8];cfg[12]=2;
-      cfg[16]=period_cfg;cfg[17]=1;cfg[18]=(case_no==1 || case_no==6)?0:1;cfg[19]=detail_cfg;
+      cfg[0]=8'h55;cfg[1]=chip_cfg;cfg[2]=2;cfg[3]=pattern_cfg;
+      cfg[4]=base_addr[7:0];cfg[5]=base_addr[15:8];cfg[6]=base_addr[21:16];
+      cfg[8]=length_cfg[7:0];cfg[9]=length_cfg[15:8];cfg[12]=loops_cfg;
+      cfg[16]=period_cfg;cfg[17]=write_cfg;cfg[18]=read_cfg;cfg[19]=detail_cfg;
       checksum=0;for(i=1;i<=21;i=i+1) checksum=checksum+cfg[i];
       cfg[22]=checksum;cfg[23]=8'haa;
       cs_n=0;#100;for(i=0;i<24;i=i+1) byte_io(cfg[i],unused);#100;cs_n=1;#200;
@@ -111,16 +132,41 @@ module tb_random_pattern;
   initial begin
     if(!$value$plusargs("vectors=%s",vector_path)) $fatal(1,"Missing Python reference vectors");
     $readmemh(vector_path,vectors);
-    for(case_no=0;case_no<10;case_no=case_no+1) begin
+    if($test$plusargs("repro_only")) first_case=CASES-REPRO_CASES;
+    for(case_no=first_case;case_no<CASES;case_no=case_no+1) begin
       active=0;cs_n=1;sclk=0;
       if(case_no!=8) begin rst_n=0;#30;@(negedge clk);rst_n=1;end
       seed_base=(case_no==8)?1:0;
       period_cfg=(case_no==1 || case_no==6 || case_no==8)?7:((case_no==2)?13:10);
       case(case_no) 0:length_cfg=17;1:length_cfg=5;2:length_cfg=4;3:length_cfg=1;4:length_cfg=300;default:length_cfg=9;endcase
+      base_addr=22'h12000;loops_cfg=2;pattern_cfg=9;write_cfg=1;read_cfg=(case_no==1 || case_no==6)?0:1;
+      if(case_no>=LEGACY_CASES && case_no<LEGACY_CASES+BOUNDARY_CASES) begin
+        boundary_no=case_no-LEGACY_CASES;
+        // Eight lengths x three write modes x two read modes.
+        case(boundary_no/6)
+          0:length_cfg=511; 1:length_cfg=512;
+          2:length_cfg=575; 3:length_cfg=576; 4:length_cfg=577;
+          5:length_cfg=1024; 6:length_cfg=1025; 7:length_cfg=16385;
+        endcase
+        write_cfg=(boundary_no/2)%3;read_cfg=boundary_no%2;
+        period_cfg=7;
+      end else if(case_no<LEGACY_CASES+BOUNDARY_CASES+PATTERN_CASES && case_no>=LEGACY_CASES+BOUNDARY_CASES) begin
+        boundary_no=case_no-LEGACY_CASES-BOUNDARY_CASES;
+        pattern_cfg=1+boundary_no/2;read_cfg=boundary_no%2;
+        length_cfg=read_cfg?1025:577;period_cfg=7;
+      end
+      if(case_no>=LEGACY_CASES+BOUNDARY_CASES+PATTERN_CASES) begin
+        // User's 2026-11-05 capture: base 0, length 0x250, one round,
+        // 50 ns, random x16, with details; also cross-check the other modes.
+        boundary_no=case_no-LEGACY_CASES-BOUNDARY_CASES-PATTERN_CASES;
+        base_addr=0;loops_cfg=1;length_cfg=592;period_cfg=10;
+        pattern_cfg=9;write_cfg=boundary_no/2;read_cfg=boundary_no%2;
+      end
       chip_cfg=(case_no==7)?8'h80:8'h83;
-      detail_cfg=(case_no==5 || case_no==6 || case_no==8 || case_no==9);fault_cfg=detail_cfg;
-      for(i=0;i<512;i=i+1) begin memory[i]=0;seen[0][i]=0;seen[1][i]=0;end
-      writes[0]=0;writes[1]=0;details[0]=0;details[1]=0;
+      fault_cfg=(case_no==5 || case_no==6 || case_no==8 || case_no==9);
+      detail_cfg=fault_cfg || case_no>=LEGACY_CASES+BOUNDARY_CASES+PATTERN_CASES;
+      for(i=0;i<MAX_WORDS;i=i+1) begin memory[i]=0;seen[0][i]=0;seen[1][i]=0;end
+      reads[0]=0;reads[1]=0;writes[0]=0;writes[1]=0;details[0]=0;details[1]=0;
       summaries=0;acks=0;polls=0;pauses=0;read_checks=0;
       active=1;#100;configure;
       if(case_no==9) begin
@@ -132,12 +178,12 @@ module tb_random_pattern;
         if(!dut.random_seed_wait || dut.flg || dut.spi_start_test)
           $fatal(1,"Waiting replacement did not stop the old memory engine");
         poll;for(i=0;i<64;i=i+1) if(bytes[i]!==0) $fatal(1,"Old report leaked during seed wait");
-        for(i=0;i<512;i=i+1) begin memory[i]=0;seen[0][i]=0;seen[1][i]=0;end
-        writes[0]=0;writes[1]=0;details[0]=0;details[1]=0;
+        for(i=0;i<MAX_WORDS;i=i+1) begin memory[i]=0;seen[0][i]=0;seen[1][i]=0;end
+        reads[0]=0;reads[1]=0;writes[0]=0;writes[1]=0;details[0]=0;details[1]=0;
         summaries=0;acks=0;polls=0;pauses=0;read_checks=0;seed_base=1;
         active=1;release dut.u_seed_rng.seed_ready;
       end
-      while(summaries<2) begin
+      while(summaries<loops_cfg) begin
         wait(dut.u_spi_protocol.detail_pending || dut.u_spi_protocol.pending_test_complete);
         #200;before_ack=acks;poll;polls=polls+1;
         if(polls>40) $fatal(1,"Random test stalled");
@@ -147,7 +193,7 @@ module tb_random_pattern;
           if(bytes[1]==8'h19) begin
             report_index={bytes[15],bytes[14],bytes[13],bytes[12]};
             if(!fault_cfg || report_index!=1 || details[report_loop]!=0 ||
-               {bytes[19],bytes[18],bytes[17],bytes[16]}!=={10'd0,BASE+22'd2} ||
+               {bytes[19],bytes[18],bytes[17],bytes[16]}!=={10'd0,base_addr+22'd2} ||
                {bytes[23],bytes[22]}!==golden(report_loop,2) ||
                {bytes[21],bytes[20]}!==(golden(report_loop,2)^16'd1) || acks!=before_ack)
               $fatal(1,"Random detail mismatch loop=%0d index=%0d",report_loop,report_index);
@@ -162,13 +208,18 @@ module tb_random_pattern;
         end
       end
       if(case_no==0 && seed_wait_cycles==0) $fatal(1,"Unready seed waiting was not exercised");
-      if(read_checks==0) $fatal(1,"Random coverage missing");
-      $display("PASS random case %0d: period=%0d length=%0d chip=%h detail=%0d writes=%0d/%0d read checks=%0d",case_no,period_cfg,length_cfg,chip_cfg,detail_cfg,writes[0],writes[1],read_checks);
+      if(read_checks!=loops_cfg*length_cfg || reads[0]!=length_cfg || (loops_cfg==2 && reads[1]!=length_cfg))
+        $fatal(1,"Incomplete memory read coverage %0d/%0d",read_checks,loops_cfg*length_cfg);
+      $display("PASS memory case %0d: pattern=%0d write=%0d read=%0d period=%0d length=%0d chip=%h detail=%0d writes=%0d/%0d read checks=%0d",case_no,pattern_cfg,write_cfg,read_cfg,period_cfg,length_cfg,chip_cfg,detail_cfg,writes[0],writes[1],read_checks);
+      $fflush();
       active=0;
     end
-    if(seeds_taken!=11) $fatal(1,"Seed consumed more than once per test");
-    $display("PASS: %0d pin-observed random writes, reproducible readback, odd/even lengths, x8/x16, >256 addresses, faults without logging pauses, seed wait and same-mode restart",total_writes);
+    if(seeds_taken!=((first_case==0)?LEGACY_CASES+BOUNDARY_CASES+REPRO_CASES+1:REPRO_CASES)) $fatal(1,"Seed consumed more than once per test");
+    if(first_case==0)
+      $display("PASS: %0d memory cases, %0d pin-observed writes, reproducible readback, odd/even lengths, x8/x16, all write/read modes, 0x200/0x240/0x400/0x4000 boundaries, all patterns, faults without logging pauses, seed wait and same-mode restart",CASES,total_writes);
+    else
+      $display("PASS: %0d user-configuration cases, %0d pin-observed writes and read captures; base 0, length 592, one round, 50 ns, random x16, details enabled, all write/read modes",REPRO_CASES,total_writes);
     $finish;
   end
-  initial begin #15000000;$fatal(1,"Random pattern watchdog expired");end
+  initial begin #100000000;$fatal(1,"Random pattern watchdog expired");end
 endmodule

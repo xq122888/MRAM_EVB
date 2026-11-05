@@ -8,12 +8,15 @@ compiler_args=()
 if [[ -n ${IVL_BASE:-} ]]; then compiler_args+=(-B "$IVL_BASE"); fi
 output_dir=$(mktemp -d)
 trap 'rm -rf -- "$output_dir"' EXIT
-python - "$output_dir/vectors.hex" <<'PY'
+fixture_seed=${MRAM_TEST_SEED:-6d2b79f5}
+python - "$output_dir/vectors.hex" "$fixture_seed" <<'PY'
 from pathlib import Path
 import sys
-state = 0x6d2b79f5
+state = int(sys.argv[2], 16)
+if not 0 < state < 0xffffffff:
+    raise SystemExit("MRAM_TEST_SEED must be a nonzero 32-bit hex seed other than ffffffff")
 values = []
-for _ in range(512):
+for _ in range(32768):
     values.append(f"{state:08x}\n")
     state ^= (state << 13) & 0xffffffff
     state ^= state >> 17
@@ -23,4 +26,5 @@ PY
 "$iverilog_bin" "${compiler_args[@]}" -g2012 -s tb_random_pattern \
   -o "$output_dir/random.vvp" "$repo_dir/tests/tb_top_timing.sv" \
   "$repo_dir/tests/tb_random_pattern.sv" "$src/top.v" "$src/spi.v" "$src/SPI_Slave.v"
-timeout 120 "$vvp_bin" "$output_dir/random.vvp" +vectors="$output_dir/vectors.hex"
+timeout 600 "$vvp_bin" "$output_dir/random.vvp" +vectors="$output_dir/vectors.hex" \
+  +fixture_seed="$fixture_seed" "$@"

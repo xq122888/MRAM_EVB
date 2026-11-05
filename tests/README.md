@@ -17,6 +17,12 @@ bench/count below describe earlier commits, not current validation requirements.
 The TRNG-seeded random-data repair and its digital replay regression are documented
 in [random-pattern.md](random-pattern.md). Run `bash tests/run_random_pattern.sh`
 and `bash tests/run_trng_seed.sh` for seed handling, conditioning and health checks.
+The memory replay bench now covers lengths through 16385 words, all write/read
+modes, all data patterns, and the reported 592-word/50 ns configuration. See
+[length-boundary-diagnosis.md](length-boundary-diagnosis.md) for board evidence
+and limits. `bash tests/run_random_pattern.sh +repro_only` runs just the six
+592-word cases; `MRAM_TEST_SEED=c58ed660` selects the reconstructed log seed
+in the digital fixture only.
 Check the XDC command subset and absence of debug-core insertion with
 `tclsh tests/check_xdc.tcl`; this is a smoke test, not a Vivado run.
 
