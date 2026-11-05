@@ -93,6 +93,7 @@ wire [15:0] vio_t_LBL2LBH_r ;
 
 // spi传递数据
 wire        spi_start_test  ;
+wire spi_config_commit;
 wire [7:0]  spi_chip_type;
 wire [3:0]  spi_test_mode;
 wire [7:0]  spi_data_pattern;
@@ -226,9 +227,9 @@ wire read_remaining_after_tick = (read_valid[0] && read_delay_0>4'd2) ||
                                  (read_valid[1] && read_delay_1>4'd2);
 
 wire        start           ;// 连接spi_start_test信号，解析成功后开始测试（仅第一个循环出现）
-reg         start_d1        ;
-reg         start_d2        ;
-reg         start_d3        ;
+(* max_fanout=24 *) reg start_d1        ;
+(* max_fanout=24 *) reg start_d2        ;
+(* max_fanout=24 *) reg start_d3        ;
 reg         start_d4        ;
 reg         stop            ;
 
@@ -325,8 +326,25 @@ wire current_is_initial, addr_count_equal;
 mram_equal_lut #(.WIDTH(22)) eq_current_initial(.a(pad_cmd_addr),.b(engine_initial_address),.match(current_is_initial));
 mram_equal_lut #(.WIDTH(23)) eq_count_length(.a(addr_compare_count),.b({2'b0,vio_addr_num}),.match(addr_count_equal));
 wire actual_equals_reference, actual_equals_current;
-mram_equal_lut #(.WIDTH(16)) eq_actual_reference(.a(dq_read_data),.b(read_expected_0),.match(actual_equals_reference));
-mram_equal_lut #(.WIDTH(16)) eq_actual_current(.a(dq_read_data),.b(read_expected_1),.match(actual_equals_current));
+wire ref_low_match,ref_high_match,current_low_match,current_high_match;
+(* keep="true" *) reg ref_low_equal,ref_high_equal,current_low_equal,current_high_equal;
+(* keep="true",max_fanout=24 *) reg compare_valid_d;
+reg compare_bank_d;
+mram_equal_lut #(.WIDTH(16)) eq_actual_reference(.a(dq_read_data),.b(read_expected_0),.match(),.half_low(ref_low_match),.half_high(ref_high_match));
+mram_equal_lut #(.WIDTH(16)) eq_actual_current(.a(dq_read_data),.b(read_expected_1),.match(),.half_low(current_low_match),.half_high(current_high_match));
+assign actual_equals_reference=ref_low_equal && ref_high_equal;
+assign actual_equals_current=current_low_equal && current_high_equal;
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) begin
+        ref_low_equal<=0;ref_high_equal<=0;current_low_equal<=0;current_high_equal<=0;
+        compare_valid_d<=0;compare_bank_d<=0;
+    end else if(read_pipeline_flush) begin compare_valid_d<=0;end
+    else if(!detail_stall) begin
+        ref_low_equal<=ref_low_match;ref_high_equal<=ref_high_match;
+        current_low_equal<=current_low_match;current_high_equal<=current_high_match;
+        compare_valid_d<=read_compare_valid;compare_bank_d<=read_compare_bank;
+    end
+end
 // Compare three address slices in parallel, then combine five one-bit
 // results in one LUT. Include the two upper counter bits in the high slice
 // so the original unsigned 23-bit-vs-21-bit relation is preserved.
@@ -359,9 +377,28 @@ assign addr_last_group[7] = (addr_compare_count[22:21] == 2'b0);
 wire addr_is_last = (vio_addr_num != 21'd0) && addr_last_low && addr_last_high;
 // Algorithms reuse the same pin engine and input-capture pipeline. Each pass
 // restarts only after physical pins, samples, comparisons and error enqueue drain.
-wire algorithm_selected = !random_x8 &&
-    (((vio_din_sel==8'd1 || vio_din_sel==8'd2) && vio_TMODE==4'd2) ||
-     (vio_din_sel==8'd10 && vio_TMODE<4'd2));
+// Decode configuration into FFs well before the frame tail permits start.
+// No raw mode/pattern decode may precede the running address comparators.
+(* keep="true",max_fanout=24 *) reg algorithm_selected,algorithm_march,algorithm_first_one;
+(* keep="true",max_fanout=24 *) reg mode_write,mode_read,mode_write_read,random_x8;
+(* keep="true",max_fanout=24 *) reg [9:1] data_select;
+integer pattern_decode;
+always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        algorithm_selected<=0;algorithm_march<=0;algorithm_first_one<=0;
+        mode_write<=1;mode_read<=0;mode_write_read<=0;random_x8<=1;data_select<=0;
+    end else begin
+        algorithm_selected <= !((chip_type==8'h80)||(chip_type==8'h82)) &&
+            (((vio_din_sel==8'd1 || vio_din_sel==8'd2) && vio_TMODE==4'd2) ||
+             (vio_din_sel==8'd10 && vio_TMODE<4'd2));
+        algorithm_march <= (vio_din_sel==8'd10);
+        algorithm_first_one <= (vio_din_sel==8'd2);
+        mode_write<=(vio_TMODE==4'd0);mode_read<=(vio_TMODE==4'd1);mode_write_read<=(vio_TMODE==4'd2);
+        random_x8<=((chip_type==8'h80)||(chip_type==8'h82));
+        for(pattern_decode=1;pattern_decode<=9;pattern_decode=pattern_decode+1)
+            data_select[pattern_decode] <= (vio_din_sel==pattern_decode);
+    end
+end
 wire algorithm_busy,algorithm_restart,algorithm_read,algorithm_pair,algorithm_final;
 wire [15:0] algorithm_word;
 wire [21:0] algorithm_address;
@@ -370,18 +407,29 @@ always @(posedge clk or negedge rstn) begin
     if(!rstn) begin algorithm_restart_d2<=0;algorithm_restart_d3<=0;end
     else begin algorithm_restart_d2<=algorithm_restart;algorithm_restart_d3<=algorithm_restart_d2;end
 end
-wire core_busy = flg || pad_active || read_pending || read_compare_valid || err_flg;
+wire core_busy = flg || pad_active || read_pending || read_compare_valid || compare_valid_d || err_flg;
 wire [21:0] engine_initial_address = algorithm_selected ? algorithm_address : {2'b0,vio_addr_ini};
-wire [20:0] engine_last_address = (algorithm_selected && algorithm_pair) ? 21'd0 : spi_last_test_address;
+// Phase fields settle while the engine is idle, before its delayed restart.
+// Keep wide count inputs in FFs, separating length selection from comparison.
+(* keep="true" *) reg [20:0] engine_count_limit,engine_last_address;
+always @(posedge clk) begin
+    engine_count_limit <= (algorithm_selected && algorithm_pair) ? 21'd1 : spi_test_length[20:0];
+    engine_last_address <= (algorithm_selected && algorithm_pair) ? 21'd0 : spi_last_test_address;
+end
 mram_algorithm u_algorithm(
-    .clk(clk),.rst_n(rstn),.enable(algorithm_selected),.cancel(random_seed_wait),
+    .clk(clk),.rst_n(rstn),.enable(algorithm_selected),.cancel(spi_config_commit || random_seed_wait),
     .start(spi_start_test || next_loop_start_d1),.pause(detail_stall),
-    .core_busy(core_busy),.pattern(vio_din_sel),.initial_address({2'b0,vio_addr_ini}),
+    .core_busy(core_busy),.march(algorithm_march),.first_one(algorithm_first_one),.initial_address({2'b0,vio_addr_ini}),
     .last_index(spi_last_test_address),.busy(algorithm_busy),.restart(algorithm_restart),
     .read_operation(algorithm_read),.pair_phase(algorithm_pair),.final_pass(algorithm_final),
     .word_value(algorithm_word),.operation_address(algorithm_address));
 // Zero loop_count retains the original unsigned loop_count - 1 behavior.
 wire loop_has_more = (loop_idx < spi_last_loop_index);
+(* keep="true" *) reg loop_more_cached;
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) loop_more_cached<=0;
+    else loop_more_cached<=loop_has_more;
+end
 
 // ========== SPI协议模块实例化 ==========
 spi_protocol u_spi_protocol (
@@ -452,6 +500,7 @@ spi_protocol u_spi_protocol (
     .t_ubl2ubh_r(spi_t_ubl2ubh_r),
     .t_lbh2lbl_r(spi_t_lbh2lbl_r),
     .t_lbl2lbh_r(spi_t_lbl2lbh_r),
+    .configuration_commit(spi_config_commit),
     .start_test(spi_start_test),
     .tx_done_pulse(send_frame_ack),
     .detail_stall(spi_detail_stall),
@@ -479,7 +528,7 @@ assign chip_type  = spi_chip_type;
 assign vio_TMODE = spi_test_mode;
 assign vio_din_sel = spi_data_pattern;
 assign vio_addr_ini = spi_start_addr;
-assign vio_addr_num = (algorithm_selected && algorithm_pair) ? 21'd1 : spi_test_length[20:0];
+assign vio_addr_num = engine_count_limit;
 assign loop_count = spi_loop_count;
 assign vio_t_AVAV_w = spi_t_avav_w;
 assign vio_t_AVQV_w = spi_t_avqv_w;
@@ -516,11 +565,11 @@ assign vio_t_LBL2LBH_r = spi_t_lbl2lbh_r;
 // Collect continuously from global reset, including while waiting for a
 // command or a seed. Mode changes must not reset the entropy source.
 mram_trng_seed u_seed_rng(.clk(clk),.rst_n(rst_n),
-    .take(spi_start_test && vio_din_sel==8'd9),.seed_data(trng_seed_data),
+    .take(spi_start_test && data_select[9]),.seed_data(trng_seed_data),
     .seed_ready(trng_seed_ready),.health_fail(trng_seed_fault));
 always @(posedge clk or negedge rst_n) begin
     if(!rst_n) random_test_seed<=32'd1;
-    else if(spi_start_test && vio_din_sel==8'd9) random_test_seed<=trng_seed_data;
+    else if(spi_start_test && data_select[9]) random_test_seed<=trng_seed_data;
 end
 reg [31:0] random_seed;
 reg [31:0] random_state;
@@ -538,9 +587,9 @@ endfunction
 // The controller emits its loop-start pulse on a restart from a nonzero
 // loop index too. Cover both start edges so this is not a seed advance.
 wire random_new_test = (start_d1 != start_d2);
-wire random_read_restart = (vio_TMODE==4'd2) && rd_en && !rd_en_d;
+wire random_read_restart = mode_write_read && rd_en && !rd_en_d;
 wire [31:0] random_begin_seed = random_new_test ? random_test_seed : random_seed_next;
-wire random_x8 = (chip_type==8'h80) || (chip_type==8'h82);
+// Width selection is predecoded above with the other configuration flags.
 wire [15:0] random_begin_word = random_x8 ? {random_begin_seed[7:0],random_begin_seed[7:0]} : random_begin_seed[15:0];
 wire [15:0] random_seed_word = random_x8 ? {random_seed[7:0],random_seed[7:0]} : random_seed[15:0];
 wire [15:0] random_next_word = random_x8 ? {random_state_next[7:0],random_state_next[7:0]} : random_state_next[15:0];
@@ -635,18 +684,18 @@ always @(posedge clk or negedge rstn) begin
 
         // ---------- 2. 检测循环结束条件（与原逻辑完全一致） ----------
         if (!detail_stall && flg && addr_is_last &&
-            (hold_before_one || (vio_addr_num==21'd1 && hold_before_two))) begin
+            (before_one_event || (vio_addr_num==21'd1 && before_two_event))) begin
             // Length one has no penultimate address to notify completion. Arm
             // the pending read at the write->read phase change, so keep drops
             // before the sole read ends instead of starting an extra write.
             if (algorithm_selected) begin
                 if(algorithm_final && !loop_finish) loop_finish <= 1'b1;
             end
-            else if (vio_TMODE == 4'd2 && (rd_en_d ||
+            else if (mode_write_read && (rd_en_d ||
                 (vio_addr_num==21'd1 && rd_en))) begin
                 if (!loop_finish) loop_finish <= 1'b1;
             end
-            else if (vio_TMODE != 4'd2) begin
+            else if (!mode_write_read) begin
                 if (!loop_finish) loop_finish <= 1'b1;
             end
         end
@@ -657,7 +706,7 @@ always @(posedge clk or negedge rstn) begin
             loop_finish       <= 1'b0;     // 清除结束标志
 //            next_loop_start   <= 1'b1;     // 产生启动脉冲
 
-            if (loop_has_more) begin
+            if (loop_more_cached) begin
                 next_loop_start_d1 <= 1'b1;
                 loop_idx <= loop_idx_inc;   // 进入下一循环
             end
@@ -701,7 +750,7 @@ wire count_restart = (start_d1 != start_d2) || next_loop_start_d1 || algorithm_r
 // A single address wraps only at the write->read turnaround. Pure write/read
 // and the final read must advance to length, so the engine stops after one cycle.
 wire count_wrap_raw = !algorithm_selected && keep && addr_is_last &&
-    ((vio_addr_num!=21'd1) || (vio_TMODE==4'd2 && !rd_en_d));
+    ((vio_addr_num!=21'd1) || (mode_write_read && !rd_en_d));
 (* keep="true" *) reg count_wrap_cached,count_less_cached;
 always @(posedge clk or negedge rstn) begin
     if(!rstn) begin count_wrap_cached<=0;count_less_cached<=0;end
@@ -711,7 +760,7 @@ always @(posedge clk or negedge rstn) begin
 end
 wire count_wrap=count_wrap_cached;
 (* keep="true",max_fanout=24 *) wire count_update_enable = !detail_stall &&
-    (count_restart || (hold_before_two && (count_wrap || count_less_cached)));
+    (count_restart || (before_two_event && (count_wrap || count_less_cached)));
 (* keep="true", max_fanout=12 *) wire count_clear_data = count_restart || count_wrap;
 always @(posedge clk or negedge rstn) begin
     if (!rstn)
@@ -737,11 +786,35 @@ wire hold_restart_event = (next_loop_start_d2 && !next_loop_start_d3) ||
                           (start_d2 && !start_d3) ||
                           (algorithm_restart_d2 && !algorithm_restart_d3);
 (* keep="true",max_fanout=24 *) reg period_event;
+(* keep="true",max_fanout=24 *) reg before_two_event,before_one_event;
+(* keep="true" *) reg [15:0] period_before_three_w,period_before_three_r;
+(* keep="true" *) reg period_has_three_w,period_has_three_r;
+always @(posedge clk) begin
+    period_before_three_w<=spi_t_avav_w-16'd3;
+    period_before_three_r<=spi_t_avav_r-16'd3;
+    period_has_three_w<=spi_t_avav_w>=16'd3;
+    period_has_three_r<=spi_t_avav_r>=16'd3;
+end
+wire before_three_w_low,before_three_w_high,before_three_r_low,before_three_r_high;
+mram_equal_lut #(.WIDTH(23)) eq_hold_three_w(.a({rd_en_d2,1'b0,addr_hold_cnt}),.b({1'b0,!period_has_three_w,5'b0,period_before_three_w}),.match(),.half_low(before_three_w_low),.half_high(before_three_w_high));
+mram_equal_lut #(.WIDTH(23)) eq_hold_three_r(.a({rd_en_d2,1'b0,addr_hold_cnt}),.b({1'b1,!period_has_three_r,5'b0,period_before_three_r}),.match(),.half_low(before_three_r_low),.half_high(before_three_r_high));
+wire before_three_match=(before_three_w_low && before_three_w_high) || (before_three_r_low && before_three_r_high);
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) begin before_two_event<=0;before_one_event<=0;end
+    else if(!detail_stall) begin
+        if(next_loop_start_d1 || algorithm_restart || hold_restart_event || period_event) begin
+            before_two_event<=0;before_one_event<=0;
+        end else begin
+            before_two_event<=before_three_match;
+            before_one_event<=before_two_event;
+        end
+    end
+end
 always @(posedge clk or negedge rstn) begin
     if(!rstn) period_event<=0;
     else if(!detail_stall) begin
         if(next_loop_start_d1 || algorithm_restart || hold_restart_event || period_event) period_event<=0;
-        else period_event<=hold_before_one;
+        else period_event<=before_one_event;
     end
 end
 (* keep="true" *) wire hold_reinitialize = hold_restart_event || period_event;
@@ -752,7 +825,7 @@ wire hold_initial_bit = hold_restart_event || addr_count_less;
 // drain while the final address and read direction are retained.
 (* keep="true" *) wire io_cycle_start = hold_restart_event ||
     (flg && period_event && !addr_count_equal);
-wire read_pipeline_flush = spi_start_test || random_seed_wait ||
+wire read_pipeline_flush = spi_config_commit || spi_start_test || random_seed_wait ||
     (start_d1 && !start_d2) || next_loop_start_d1 || algorithm_restart;
 wire read_launch = io_cycle_start && rd_en_d && !read_pipeline_flush;
 wire read_end = flg && addr_count_equal && period_event;
@@ -849,7 +922,7 @@ end
 //---
 always @* begin
     flg_next=flg;
-    if(random_seed_wait || spi_start_test || (start_d1 && !start_d2) || next_loop_start_d1 || algorithm_restart)
+    if(spi_config_commit || random_seed_wait || spi_start_test || (start_d1 && !start_d2) || next_loop_start_d1 || algorithm_restart)
         flg_next=1'b0;
     else if(!detail_stall) begin
         if(hold_restart_event) flg_next=1'b1;
@@ -862,7 +935,7 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn) begin rd_en_d<=0;rd_en_d2<=0;end
     else if(spi_start_test || random_seed_wait || (algorithm_selected && next_loop_start_d1)) begin
-        rd_en_d<=!algorithm_selected && (vio_TMODE==4'd1);rd_en_d2<=!algorithm_selected && (vio_TMODE==4'd1);
+        rd_en_d<=!algorithm_selected && mode_read;rd_en_d2<=!algorithm_selected && mode_read;
     end else if(algorithm_restart) begin
         rd_en_d<=algorithm_read;rd_en_d2<=algorithm_read;
     end else if(!detail_stall) begin rd_en_d<=rd_en;rd_en_d2<=rd_en_d;end
@@ -909,52 +982,35 @@ always @(posedge clk or negedge rstn) begin
         dout_ref_addr <= pad_cmd_addr;
 end
 
-// Sample both possible comparison operands on every running clock. The
-// one-bit event selects the matching samples only after this edge. Error
-// detection therefore drives neither a 54-bit snapshot CE nor a wide data mux.
-// Backpressure freezes these samples before the mailbox consumes the event.
+// Pair the local comparison stage with a parallel metadata/data pipeline.
+// Both stages run without a wide compare-dependent CE. The IOB sample time
+// stays fixed; only the fabric mismatch flag is delayed by one clock.
+reg [21:0] ref_addr_pending,current_addr_pending;
+reg [15:0] data_pending,ref_pending,current_pending;
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
-        error_ref_addr_sample <= 22'd0;
-        error_current_addr_sample <= 22'd0;
-        error_data_snapshot <= 16'd0;
-        error_ref_sample <= 16'd0;
-        error_current_sample <= 16'd0;
+        ref_addr_pending<=0;current_addr_pending<=0;data_pending<=0;ref_pending<=0;current_pending<=0;
+        error_ref_addr_sample<=0;error_current_addr_sample<=0;
+        error_data_snapshot<=0;error_ref_sample<=0;error_current_sample<=0;
     end else if (!detail_stall) begin
-        error_ref_addr_sample <= read_address_0;
-        error_current_addr_sample <= read_address_1;
-        error_data_snapshot <= dq_read_data;
-        error_ref_sample <= read_expected_0;
-        error_current_sample <= read_expected_1;
+        ref_addr_pending<=read_address_0;current_addr_pending<=read_address_1;
+        data_pending<=dq_read_data;ref_pending<=read_expected_0;current_pending<=read_expected_1;
+        error_ref_addr_sample<=ref_addr_pending;error_current_addr_sample<=current_addr_pending;
+        error_data_snapshot<=data_pending;error_ref_sample<=ref_pending;error_current_sample<=current_pending;
     end
 end
-wire early_error = read_compare_valid && read_compare_bank && !actual_equals_reference;
-wire late_error = read_compare_valid && !read_compare_bank && !actual_equals_current;
-// Select the metadata bank captured with the IOB input on the preceding edge.
-// The data snapshot and error flag become visible together for the mailbox.
+wire early_error = compare_valid_d && compare_bank_d && !actual_equals_reference;
+wire late_error = compare_valid_d && !compare_bank_d && !actual_equals_current;
 always @(posedge clk or negedge rstn) begin
-    if (!rstn)
-        error_uses_reference <= 1'b0;
-    else if (!detail_stall) begin
-        if (read_compare_bank)
-            error_uses_reference <= 1'b1;
-        else
-            error_uses_reference <= 1'b0;
-    end
+    if (!rstn) error_uses_reference<=0;
+    else if (!detail_stall) error_uses_reference<=compare_bank_d;
 end
 always @(posedge clk or negedge rstn) begin
-    if (!rstn) begin
-        err_flg <= 1'b0;
-    end else if (read_pipeline_flush) begin
-        err_flg <= 1'b0;
-    end else begin
-        err_flg <= 1'b0;
-        if (!detail_stall) begin
-            if (early_error)
-                err_flg <= 1'b1;
-            else if (late_error)
-                err_flg <= 1'b1;
-        end
+    if (!rstn) err_flg<=0;
+    else if(read_pipeline_flush) err_flg<=0;
+    else begin
+        err_flg<=0;
+        if(!detail_stall && (early_error || late_error)) err_flg<=1;
     end
 end
 
@@ -974,13 +1030,13 @@ always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         random_seed <= 32'd1;
         random_state <= 32'd1;
-    end else if (!detail_stall && vio_din_sel==8'd9) begin
+    end else if (!detail_stall && data_select[9]) begin
         if (random_new_test || next_loop_start_d1) begin
             random_seed <= random_begin_seed;
             random_state <= random_begin_seed;
         end else if (random_read_restart)
             random_state <= random_seed;
-        else if (hold_before_one)
+        else if (before_one_event)
             random_state <= random_state_next;
     end
 end
@@ -993,44 +1049,44 @@ always @(posedge clk or negedge rstn) begin
         dout <= dout;
     else if(algorithm_selected)
         dout <= ((start_d1 && !start_d2) || next_loop_start_d1) ?
-                ((vio_din_sel==8'd2) ? 16'hffff : 16'h0000) : algorithm_word;
+                (algorithm_first_one ? 16'hffff : 16'h0000) : algorithm_word;
     else if((start_d1!=0 && start_d1!=start_d2) || next_loop_start_d1 || random_read_restart)
-        if(!random_x8) case(vio_din_sel)
-            8'd1:   dout <= 16'h0000;
-            8'd2:   dout <= 16'hFFFF;
-            8'd3:   dout <= 16'h5555;
-            8'd4:   dout <= 16'hAAAA;
-            8'd5:   dout <= 16'h0000;
-            8'd6:   dout <= 16'hFFFF;
-            8'd7:   dout <= 16'h0000;
-            8'd8:   dout <= 16'hFFFF;
-            8'd9:   dout <= random_read_restart ? random_seed_word : random_begin_word;
+        if(!random_x8) (* parallel_case *) case(1'b1)
+            data_select[1]: dout <= 16'h0000;
+            data_select[2]: dout <= 16'hFFFF;
+            data_select[3]: dout <= 16'h5555;
+            data_select[4]: dout <= 16'hAAAA;
+            data_select[5]: dout <= 16'h0000;
+            data_select[6]: dout <= 16'hFFFF;
+            data_select[7]: dout <= 16'h0000;
+            data_select[8]: dout <= 16'hFFFF;
+            data_select[9]: dout <= random_read_restart ? random_seed_word : random_begin_word;
             default:dout <= 16'h0000;
-        endcase else case(vio_din_sel)
-            8'd1:   dout <= 16'h0;
-            8'd2:   dout <= 16'hFFFF;
-            8'd3:   dout <= 16'h5A5A;
-            8'd4:   dout <= 16'hA5A5;
-            8'd5:   dout <= 16'h0;
-            8'd6:   dout <= 16'hFFFF;
-            8'd7:   dout <= 16'h5555;
-            8'd8:   dout <= 16'hAAAA;
-            8'd9:   dout <= random_read_restart ? random_seed_word : random_begin_word;
+        endcase else (* parallel_case *) case(1'b1)
+            data_select[1]: dout <= 16'h0;
+            data_select[2]: dout <= 16'hFFFF;
+            data_select[3]: dout <= 16'h5A5A;
+            data_select[4]: dout <= 16'hA5A5;
+            data_select[5]: dout <= 16'h0;
+            data_select[6]: dout <= 16'hFFFF;
+            data_select[7]: dout <= 16'h5555;
+            data_select[8]: dout <= 16'hAAAA;
+            data_select[9]: dout <= random_read_restart ? random_seed_word : random_begin_word;
             default:dout <= 16'h0;
         endcase 
-    else if(hold_before_one)
-        if(!random_x8) case(vio_din_sel)
-            8'd3,8'd4,8'd5,8'd6: dout <= ~dout;
-            8'd7:   dout <= addr_cnt[15:0];
-            8'd8:   dout <= 16'hFFFF-addr_cnt[15:0];
-            8'd9:   dout <= random_next_word;
+    else if(before_one_event)
+        if(!random_x8) (* parallel_case *) case(1'b1)
+            data_select[3],data_select[4],data_select[5],data_select[6]: dout <= ~dout;
+            data_select[7]: dout <= addr_cnt[15:0];
+            data_select[8]: dout <= 16'hFFFF-addr_cnt[15:0];
+            data_select[9]: dout <= random_next_word;
             default:dout <= dout;
-        endcase else case(vio_din_sel)
-            8'd1:   dout <= addr_cnt[15:0];
-            8'd2:   dout <= 16'hFFFF-addr_cnt[15:0];
-            8'd3:   dout <= ~dout;
-            8'd4:   dout <= ~dout;
-            8'd9:   dout <= random_next_word; // one step per address update
+        endcase else (* parallel_case *) case(1'b1)
+            data_select[1]: dout <= addr_cnt[15:0];
+            data_select[2]: dout <= 16'hFFFF-addr_cnt[15:0];
+            data_select[3]: dout <= ~dout;
+            data_select[4]: dout <= ~dout;
+            data_select[9]: dout <= random_next_word; // one step per address update
             default:dout <= dout;
         endcase
     else
@@ -1177,23 +1233,23 @@ always @(posedge clk or negedge rstn) begin
     if(!rstn)
         rd_en <= 1'b0;
     else if(spi_start_test || random_seed_wait || (algorithm_selected && next_loop_start_d1))
-        rd_en <= !algorithm_selected && (vio_TMODE==4'd1);
+        rd_en <= !algorithm_selected && mode_read;
     else if(detail_stall)
         rd_en <= rd_en;
     else if(algorithm_selected)
         rd_en <= algorithm_read;
     else begin
-        case(vio_TMODE)
-            4'd0: begin  // 写
+        (* parallel_case *) case(1'b1)
+            mode_write: begin  // 写
                 rd_en <= 1'b0;
             end
-            4'd1: begin  // 读
+            mode_read: begin  // 读
                 rd_en <= 1'b1;
             end
-            4'd2: begin  // 写读
+            mode_write_read: begin  // 写读
                 if((start_d2 == 0 && start_d1 == 1) || next_loop_start_d1 || (!flg && !read_pending))
                     rd_en <= 1'b0;
-                else if(!rd_en && addr_is_last && hold_before_two)
+                else if(!rd_en && addr_is_last && before_two_event)
                     rd_en <= 1'b1;
                 else
                     rd_en <= rd_en;
@@ -1220,7 +1276,9 @@ end
 
 //----------------------------------------------------------------
 assign start = spi_start_test;// start 信号连接
-assign rstn=rst_n && (!(vio_TMODE_D2!=vio_TMODE_D1));
+// A synchronous mode decode must not drive hundreds of asynchronous resets.
+// Start/restart logic initializes the engine for every accepted command.
+assign rstn=rst_n;
 //assign rstn = rst_n && locked;
 
 // Last-stage registers connect directly to pads: no post-register mode mux.
@@ -1310,11 +1368,11 @@ endmodule
 // drain the real +40/+45 ns input capture before enabling FPGA write drivers.
 module mram_algorithm(
     input wire clk,rst_n,enable,cancel,start,pause,core_busy,
-    input wire [7:0] pattern,
+    input wire march,first_one,
     input wire [21:0] initial_address,
     input wire [20:0] last_index,
     output reg busy,restart,
-    output wire read_operation,pair_phase,final_pass,
+    output reg read_operation,pair_phase,final_pass,
     output reg [15:0] word_value,
     output reg [21:0] operation_address
 );
@@ -1324,17 +1382,15 @@ module mram_algorithm(
     reg [2:0] arm_delay;
     reg pass_seen;
     reg [21:0] end_address;
-    wire march = (pattern==8'd10);
-    assign pair_phase = march && (phase==3'd1 || phase==3'd2 || phase==3'd4 || phase==3'd5);
-    assign read_operation = march ? ((pair_phase && !pair_write) || phase==3'd3 || phase==3'd6) : phase[0];
-    assign final_pass = march ? (phase==3'd6) : (phase==3'd3);
+    // Registers isolate phase decoding from length/range and pin control.
+    wire [2:0] next_phase=phase+3'd1;
     wire index_is_last;
     mram_equal_lut #(.WIDTH(21)) eq_algorithm_index(.a(word_index),.b(last_index),.match(index_is_last));
     wire [20:0] next_index = word_index + 21'd1;
     wire [21:0] address_up = operation_address + 22'd1;
     wire [21:0] address_down = operation_address - 22'd1;
     always @* begin
-        if(!march) word_value = ((pattern==8'd2) ^ phase[1]) ? 16'hffff : 16'h0000;
+        if(!march) word_value = (first_one ^ phase[1]) ? 16'hffff : 16'h0000;
         else case(phase)
             3'd1,3'd4:word_value=pair_write ? 16'hffff : 16'h0000;
             3'd2,3'd5:word_value=pair_write ? 16'h0000 : 16'hffff;
@@ -1348,12 +1404,14 @@ module mram_algorithm(
         if(!rst_n) begin
             busy<=0;restart<=0;phase<=0;pair_write<=0;word_index<=0;
             operation_address<=0;arm_delay<=0;pass_seen<=0;
+            read_operation<=0;pair_phase<=0;final_pass<=0;
         end else begin
             restart<=0;
             if(!enable || cancel) begin busy<=0;pass_seen<=0;arm_delay<=0;end
             else if(start) begin
                 busy<=1;phase<=0;pair_write<=0;word_index<=0;
                 operation_address<=initial_address;arm_delay<=4;pass_seen<=0;
+                read_operation<=0;pair_phase<=0;final_pass<=0;
             end else if(busy && !pause) begin
                 if(arm_delay!=0) arm_delay<=arm_delay-3'd1;
                 else if(core_busy) pass_seen<=1;
@@ -1362,12 +1420,15 @@ module mram_algorithm(
                     if(final_pass) busy<=0;
                     else begin
                         restart<=1;arm_delay<=4;
-                        if(pair_phase && !pair_write) pair_write<=1;
+                        if(pair_phase && !pair_write) begin pair_write<=1;read_operation<=0;end
                         else if(pair_phase && !index_is_last) begin
-                            pair_write<=0;word_index<=next_index;
+                            pair_write<=0;word_index<=next_index;read_operation<=1;
                             operation_address<=phase[2] ? address_down : address_up;
                         end else begin
-                            phase<=phase+3'd1;pair_write<=0;word_index<=0;
+                            phase<=next_phase;pair_write<=0;word_index<=0;
+                            pair_phase<=march && (next_phase==1 || next_phase==2 || next_phase==4 || next_phase==5);
+                            read_operation<=march ? (next_phase!=0) : next_phase[0];
+                            final_pass<=march ? (next_phase==6) : (next_phase==3);
                             // Only phase 4 begins a descending sequence. Phase 5
                             // starts again at the upper endpoint after phase 4.
                             operation_address <= march && (phase==3'd3 || phase==3'd4) ? end_address : initial_address;

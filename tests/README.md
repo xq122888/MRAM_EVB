@@ -1,5 +1,9 @@
 # SPI report regression
 
+The 6c84918 routed report still fails at 200 MHz. See
+[timing-20261105-154229.md](timing-20261105-154229.md) for the measured violations
+and the register-stage changes that require a new Vivado build and report.
+
 The current x16 data table, two-background write/read tests and March C (11N)
 are defined in [data-patterns.md](data-patterns.md). Run
 `bash tests/run_data_patterns.sh` for the independent operation/pin-memory oracle.

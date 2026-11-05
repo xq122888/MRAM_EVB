@@ -18,7 +18,9 @@ module tb_top_detail;
   integer pauses=0,aborted=0,polls=0,total_details=0,n,k,frame_loop,frame_index,before_ack;
   reg detected;
   reg [21:0] captured_address;
-  reg [15:0] captured_expected;
+  reg [15:0] captured_expected,captured_actual;
+  reg [15:0] sampled_actual[0:1][0:127];
+  integer sampled_count[0:1];
   integer captured_loop,captured_index;
   integer read_seen[0:1];
   always #2.5 clk=~clk;
@@ -32,6 +34,9 @@ module tb_top_detail;
   always @(dut.A) begin
     if(!faults) injected_data <= #35 ((dut.A-configured_start)%2 ? 16'hffff : 16'h0000);
   end
+  // Dense-fault case changes DQ after every capture. The error report must
+  // retain the value at the IOB sampling edge, not a later free-running input.
+  always @(negedge clk) if(active && rst_n && case_no==7) injected_data=~injected_data;
   reg [42:0] expected_pad;
   always @(posedge clk) begin
     expected_pad={dut.pad_cmd_en,dut.pad_cmd_wn,dut.pad_cmd_gn,dut.pad_cmd_ubn,dut.pad_cmd_lbn,dut.pad_cmd_addr,dut.pad_cmd_dq_write};
@@ -49,12 +54,18 @@ module tb_top_detail;
         acks=acks+1;
       end
       if(dut.detail_stall) $fatal(1,"Error logging paused the MRAM engine");
-      if(!dut.detail_stall && !dut.read_pipeline_flush && dut.read_compare_valid) begin
+      if(!dut.detail_stall && !dut.read_pipeline_flush && dut.read_sample_valid) begin
+        sampled_actual[dut.loop_idx][sampled_count[dut.loop_idx]]=injected_data;
+        sampled_count[dut.loop_idx]=sampled_count[dut.loop_idx]+1;
+      end
+      if(!dut.detail_stall && !dut.read_pipeline_flush && dut.compare_valid_d) begin
+        if(read_seen[dut.loop_idx]>=sampled_count[dut.loop_idx]) $fatal(1,"Compared an uncaptured input");
+        captured_actual=sampled_actual[dut.loop_idx][read_seen[dut.loop_idx]];
         captured_address=configured_start+read_seen[dut.loop_idx];
         captured_expected=(read_seen[dut.loop_idx]%2)?16'hffff:16'h0000;
         read_seen[dut.loop_idx]=read_seen[dut.loop_idx]+1;
         if(read_seen[dut.loop_idx]>length_cfg) $fatal(1,"Duplicate read sample");
-        detected=(injected_data!=captured_expected);
+        detected=(captured_actual!=captured_expected);
       end
       if(detected) begin
         captured_loop=dut.loop_idx;
@@ -63,7 +74,7 @@ module tb_top_detail;
         captured_index=produced[captured_loop];
         if(captured_index>127) $fatal(1,"Unexpected repeated compare events");
         expected_address[captured_loop][captured_index]=captured_address;
-        expected_actual[captured_loop][captured_index]=injected_data;
+        expected_actual[captured_loop][captured_index]=captured_actual;
         expected_word[captured_loop][captured_index]=captured_expected;
       end
     end
@@ -75,7 +86,7 @@ module tb_top_detail;
       if(dut.hold_release_count!==dut.addr_hold_cnt || dut.hold_sample_count!==dut.addr_hold_cnt)
         $fatal(1,"Timer replicas diverged during detail/start/loop control");
       if(detected && (dut.error_addr_snapshot!==captured_address ||
-         dut.error_data_snapshot!==injected_data || dut.error_expected_snapshot!==captured_expected))
+         dut.error_data_snapshot!==captured_actual || dut.error_expected_snapshot!==captured_expected))
         $fatal(1,"Compare-edge snapshot used wrong operands case=%0d loop=%0d seen=%0d A=%h expectedA=%h value=%h expected=%h",case_no,dut.loop_idx,read_seen[dut.loop_idx],dut.error_addr_snapshot,captured_address,dut.error_data_snapshot,dut.error_expected_snapshot);
       if(dut.loop_idx>acks) $fatal(1,"Loop advanced without summary ACK");
       // Independent active-cycle contract: no error, full queue or host poll
@@ -144,7 +155,7 @@ module tb_top_detail;
   initial begin
     for(case_no=0;case_no<8;case_no=case_no+1) begin
       active=0;rst_n=0;cs_n=1;sclk=0;#30;
-      produced[0]=0;produced[1]=0;received_details[0]=0;received_details[1]=0;read_seen[0]=0;read_seen[1]=0;
+      produced[0]=0;produced[1]=0;received_details[0]=0;received_details[1]=0;read_seen[0]=0;read_seen[1]=0;sampled_count[0]=0;sampled_count[1]=0;
       acks=0;summaries=0;pauses=0;aborted=0;polls=0;
       enable_detail=(case_no!=2);faults=(case_no<3 || case_no>=5);
       length_cfg=(case_no>=6)?32:4;read_cfg=(case_no==6)?0:1;
@@ -161,7 +172,7 @@ module tb_top_detail;
           begin configure;end
           begin
             wait(dut.spi_start_test===1'b1);@(negedge clk);
-            produced[0]=0;produced[1]=0;received_details[0]=0;received_details[1]=0;read_seen[0]=0;read_seen[1]=0;
+            produced[0]=0;produced[1]=0;received_details[0]=0;received_details[1]=0;read_seen[0]=0;read_seen[1]=0;sampled_count[0]=0;sampled_count[1]=0;
             acks=0;summaries=0;pauses=0;aborted=0;polls=0;active=1;
           end
         join

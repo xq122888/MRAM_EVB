@@ -87,6 +87,10 @@ module tb_top_predicates;
   top dut(.clkp(1'b0),.clkn(1'b1),.rst_n(1'b0),.spi_cs_n(1'b1),
           .spi_sclk(1'b0),.spi_mosi(1'b0));
   initial begin
+    // This is an unclocked arithmetic harness; configure the registered
+    // algorithm selector explicitly. Full SPI benches verify its decoding.
+    force dut.algorithm_selected=1'b0;
+    force dut.engine_last_address=decoded_last_address;
     force dut.addr_hold_cnt=hold;force dut.vio_t_AVAV=unit_selected_period;
     force dut.u_spi_protocol.tx_byte_cnt=unit_tx_length;
     force dut.u_spi_protocol.tx_byte_ptr=unit_tx_pointer;

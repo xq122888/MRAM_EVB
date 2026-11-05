@@ -42,6 +42,9 @@ proc mram_collect_spi_timing {repo_root} {
     puts $metadata "MRAM IOB register candidates (expected 75): [llength $mram_io_regs]"
     puts $metadata "Registered output-command FFs (expected 44): [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *pad_cmd*reg*}]]"
     puts $metadata "Registered period-event FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *period_event_reg*}]]"
+    puts $metadata "Predicted P-1/P-2 event FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && (NAME =~ *before_one_event_reg* || NAME =~ *before_two_event_reg*)}]]"
+    puts $metadata "Registered effective count-bound FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && (NAME =~ *engine_count_limit_reg* || NAME =~ *engine_last_address_reg*)}]]"
+    puts $metadata "Registered one-hot data-select FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *data_select_reg*}]]"
     puts $metadata "Multi-pass/March algorithm FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *u_algorithm/*}]]"
     puts $metadata "Algorithm phase FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *u_algorithm/phase_reg*}]]"
     puts $metadata "ILA/debug-hub cells (expected 0): [llength [get_cells -quiet -hierarchical -filter {NAME =~ u_ila_0 || NAME =~ u_ila_0/* || NAME =~ dbg_hub || NAME =~ dbg_hub/*}]]"
@@ -84,6 +87,7 @@ proc mram_collect_spi_timing {repo_root} {
         close $run_input
     }
     puts $metadata "Qualified DQ capture comparison-stage registers: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *read_compare_valid_reg}]]"
+    puts $metadata "Pipelined mismatch-valid FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *compare_valid_d_reg}]]"
     puts $metadata "Latched TRNG test-seed registers: [llength [get_cells -quiet -hierarchical -filter {NAME =~ *random_test_seed_reg*}]]"
     puts $metadata "Physical RO loop nets matched: [llength [get_nets -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_bank*/ring*}]]"
     set ro_nets [get_nets -quiet -hierarchical -filter {NAME =~ *u_seed_rng/u_entropy/ro_bank*/ring*}]

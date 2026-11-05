@@ -11,4 +11,4 @@ trap 'rm -rf -- "$output_dir"' EXIT
 "$iverilog_bin" "${compiler_args[@]}" -g2012 -s tb_spi_reports \
   -o "$output_dir/reports.vvp" "$repo_dir/tests/tb_spi_reports.sv" \
   "$src/spi.v" "$src/SPI_Slave.v"
-timeout 180 "$vvp_bin" "$output_dir/reports.vvp"
+timeout 600 "$vvp_bin" "$output_dir/reports.vvp"

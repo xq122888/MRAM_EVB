@@ -37,13 +37,15 @@ module tb_mram_pins;
   always @(posedge clk) begin
     expected_pad={dut.pad_cmd_en,dut.pad_cmd_wn,dut.pad_cmd_gn,dut.pad_cmd_ubn,dut.pad_cmd_lbn,dut.pad_cmd_addr,dut.pad_cmd_dq_write};
     if(checking && rst_n && dut.flg && !dut.detail_stall && !dut.read_pipeline_flush) begin
+      if(dut.before_one_event!==dut.hold_before_one || dut.before_two_event!==dut.hold_before_two)
+        $fatal(1,"Predicted P-1/P-2 events diverged");
       if(dut.period_event!==dut.period_match) $fatal(1,"Predicted period pulse diverged");
       if(dut.hold_before_two && !dut.count_restart &&
          (dut.count_wrap_cached!==dut.count_wrap_raw || dut.count_less_cached!==dut.addr_count_less))
         $fatal(1,"Cached count boundary was not ready at P-2");
     end
     clock_no=clock_no+1;
-    compare_now=checking && rst_n && !dut.detail_stall && dut.read_compare_valid;
+    compare_now=checking && rst_n && !dut.detail_stall && dut.compare_valid_d;
     sample_now=checking && rst_n && !dut.detail_stall && dut.read_sample_valid;
     if(sample_now) begin
       if(captured>=launched || sample_due[captured]!=clock_no)
@@ -56,7 +58,7 @@ module tb_mram_pins;
       captured=captured+1;capture_total=capture_total+1;
     end
     if(compare_now) begin
-      if(clock_no!=sample_due[compared]+1 ||
+      if(clock_no!=sample_due[compared]+2 ||
          dut.error_addr_snapshot!==sample_addr[compared] ||
          dut.error_expected_snapshot!==sample_expected[compared] ||
          dut.error_data_snapshot!==16'h1234)

@@ -117,29 +117,42 @@ module mram_trng_seed(
     reg ready_reg,have_last,local_fail;
     reg [2:0] rejected_count;
     wire [31:0] candidate={partial_seed[23:0],entropy_byte};
+    reg [31:0] candidate_word;
+    reg candidate_pending,candidate_checked,candidate_acceptable;
     assign health_fail=source_fail || local_fail;
     assign seed_ready=ready_reg && !health_fail;
     always @(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
             seed_data<=0;partial_seed<=0;last_taken<=0;byte_count<=0;
             ready_reg<=0;have_last<=0;local_fail<=0;rejected_count<=0;
+            candidate_word<=0;candidate_pending<=0;candidate_checked<=0;candidate_acceptable<=0;
         end else begin
-            // The cached word is immutable until consumed. Discard incoming
-            // bytes while full; a consumed seed is never offered a second time.
+            // Complete-word capture, health comparison, and token publication
+            // are separate stages. No 32-bit comparison drives the cache CE.
+            candidate_pending<=0;
+            candidate_checked<=candidate_pending;
+            if(candidate_pending)
+                candidate_acceptable <= candidate_word!=32'd0 && candidate_word!=32'hffffffff &&
+                    (!have_last || candidate_word!=last_taken);
+            // The cached word is immutable until consumed. Entropy arriving
+            // during validation/full-cache cycles is intentionally discarded.
             if(take && ready_reg) begin
                 last_taken<=seed_data;have_last<=1;ready_reg<=0;
                 partial_seed<=0;byte_count<=0;rejected_count<=0;
             end
-            if(health_fail) begin ready_reg<=0;partial_seed<=0;byte_count<=0;end
-            else if(entropy_valid && !ready_reg && !take) begin
+            if(health_fail) begin
+                ready_reg<=0;partial_seed<=0;byte_count<=0;
+                candidate_pending<=0;candidate_checked<=0;
+            end else if(candidate_checked) begin
+                if(candidate_acceptable) begin
+                    seed_data<=candidate_word;ready_reg<=1;rejected_count<=0;
+                end else if(rejected_count==3'd7) local_fail<=1;
+                else rejected_count<=rejected_count+1'b1;
+            end else if(entropy_valid && !ready_reg && !take && !candidate_pending) begin
                 partial_seed<=candidate;byte_count<=byte_count+1'b1;
                 if(byte_count==2'd3) begin
                     byte_count<=0;partial_seed<=0;
-                    if(candidate!=32'd0 && candidate!=32'hffffffff &&
-                       (!have_last || candidate!=last_taken)) begin
-                        seed_data<=candidate;ready_reg<=1;rejected_count<=0;
-                    end else if(rejected_count==3'd7) local_fail<=1;
-                    else rejected_count<=rejected_count+1'b1;
+                    candidate_word<=candidate;candidate_pending<=1;
                 end
             end
         end

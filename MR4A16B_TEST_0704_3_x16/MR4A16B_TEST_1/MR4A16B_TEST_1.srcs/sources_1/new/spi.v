@@ -18,6 +18,7 @@ module spi_protocol #(
     output wire spi_miso,
     
     // 配置输出
+    output wire configuration_commit,
     output reg [7:0]  chip_type,
     output reg [3:0]  test_mode,
     output reg [7:0]  data_pattern,
@@ -411,6 +412,12 @@ wire [15:0] commit_x8_offset_r = commit_read_period + 16'd1;
 wire [15:0] commit_bn_w = commit_x8 ? commit_x8_offset : commit_bn_offset_w;
 wire [15:0] commit_bn_r = commit_x8 ? commit_x8_offset_r : commit_en_offset_r;
 reg config_commit;
+assign configuration_commit=config_commit;
+reg report_with_errors;
+always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) report_with_errors<=0;
+    else if(config_commit) report_with_errors<=(t_mode_reg==4'd2 || din_sel_reg==8'd10);
+end
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n)
         config_commit <= 1'b0;
@@ -670,6 +677,14 @@ always @(posedge clk or negedge rst_n) begin
 end
 
 // ---------- 8.3 发送启动逻辑（只填充缓冲区，产生启动脉冲） ----------
+// Fence the entire report launch before driving the wide TX register bank.
+reg summary_ready;
+always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) summary_ready<=0;
+    else if(config_commit || report_restart || test_frame_acked) summary_ready<=0;
+    else summary_ready<=pending_test_complete && !test_busy &&
+        (!detail_enabled || (!err_flag && !detail_fifo_nonempty));
+end
 reg        frame_sent_this_cs;
 reg [7:0]  tx_buf [0:31];      // 发送缓冲区
 reg [4:0]  tx_byte_cnt;        // 总字节数
@@ -728,12 +743,11 @@ always @(posedge clk or negedge rst_n) begin
                 frame_sent_this_cs <= 1'b1;
             // A loop-finish notification precedes the final compare pipeline
             // draining. Wait for the memory engine to be idle in either mode.
-            end else if (!tx_sending && !frame_sent_this_cs && pending_test_complete && !test_busy &&
-                         (!detail_enabled || (!err_flag && !detail_fifo_nonempty))) begin
+            end else if (!tx_sending && !frame_sent_this_cs && pending_test_complete && summary_ready) begin
                 tx_is_detail <= 1'b0;
                 // 填充缓冲区
                 tx_buf[0] <= 8'h55;
-                if (test_mode == 2'd2 || data_pattern==8'd10) begin
+                if (report_with_errors) begin
                     tx_buf[1]  <= 8'h11;
                     tx_buf[2]  <= 8'hFF;
                     tx_buf[3]  <= current_loop[7:0];

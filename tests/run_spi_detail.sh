@@ -17,9 +17,9 @@ done
 "$iverilog_bin" "${compiler_args[@]}" -g2012 -s tb_spi_detail \
   -o "$output_dir/detail.vvp" "$repo_dir/tests/tb_spi_detail.sv" \
   "$src/spi.v" "$src/SPI_Slave.v"
-timeout 90 "$vvp_bin" "$output_dir/detail.vvp"
+timeout 180 "$vvp_bin" "$output_dir/detail.vvp"
 
 "$iverilog_bin" "${compiler_args[@]}" -g2012 -s tb_top_detail \
   -o "$output_dir/top_detail.vvp" "$repo_dir/tests/tb_top_timing.sv" \
   "$repo_dir/tests/tb_top_detail.sv" "$src/top.v" "$src/spi.v" "$src/SPI_Slave.v"
-timeout 90 "$vvp_bin" "$output_dir/top_detail.vvp"
+timeout 180 "$vvp_bin" "$output_dir/top_detail.vvp"

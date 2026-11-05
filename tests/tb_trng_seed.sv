@@ -73,7 +73,8 @@ module tb_trng_seed_pool;
       @(negedge clk);inject_valid=0;end
   endtask
   task word_in(input [31:0] value);
-    begin byte_in(value[31:24]);byte_in(value[23:16]);byte_in(value[15:8]);byte_in(value[7:0]);end
+    begin byte_in(value[31:24]);byte_in(value[23:16]);byte_in(value[15:8]);byte_in(value[7:0]);
+      repeat(3) @(negedge clk);end
   endtask
   task consume;
     begin @(negedge clk);take=1;@(negedge clk);take=0;
@@ -82,6 +83,7 @@ module tb_trng_seed_pool;
   initial begin
     #20;rst_n=1;
     word_in(0);if(ready) $fatal(1,"Zero seed was accepted");
+    word_in(32'hffffffff);if(ready) $fatal(1,"All-ones seed was accepted");
     word_in(32'h01020304);
     if(!ready || data!==32'h01020304 || failed) $fatal(1,"Seed assembly failed");
     word_in(32'h55667788);
@@ -93,6 +95,13 @@ module tb_trng_seed_pool;
     inject_fault=1;#1;if(ready || !failed) $fatal(1,"Source fault did not inhibit seed readiness");
     repeat(3) @(negedge clk);
     rst_n=0;inject_fault=0;repeat(3) @(negedge clk);rst_n=1;
+    // Fault while a complete candidate is still being validated: flushing
+    // must prevent a later cache publication, including after the fault drops.
+    byte_in(8'h87);byte_in(8'h65);byte_in(8'h43);byte_in(8'h21);
+    inject_fault=1;repeat(2) @(negedge clk);inject_fault=0;
+    repeat(3) @(negedge clk);
+    if(ready) $fatal(1,"A faulted in-flight candidate was published");
+    rst_n=0;repeat(3) @(negedge clk);rst_n=1;
     for(n=0;n<8;n=n+1) word_in(0);
     if(!failed || ready) $fatal(1,"Repeated invalid seeds did not fail closed");
     $display("PASS: actual seed pool; complete words, immutable token, consume, zero/repeat rejection and faults");

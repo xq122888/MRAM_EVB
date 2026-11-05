@@ -123,6 +123,9 @@ module tb_data_patterns;
       op_pos=0;errors=0;details=0;physical_launches=0;physical_captures=0;prior_read=0;
     end
     if(dut.detail_stall) $fatal(1,"Algorithm paused for a report");
+    if(dut.flg && !dut.read_pipeline_flush &&
+       (dut.before_one_event!==dut.hold_before_one || dut.before_two_event!==dut.hold_before_two || dut.period_event!==dut.period_match))
+      $fatal(1,"Algorithm timer event prediction diverged");
     if(dut.read_sample_valid && !dut.read_pipeline_flush) begin
       sample_address=dut.read_due_0?dut.read_address_0:dut.read_address_1;
       sample_expected=dut.read_due_0?dut.read_expected_0:dut.read_expected_1;

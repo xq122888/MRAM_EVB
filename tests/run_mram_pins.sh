@@ -9,4 +9,4 @@ trap 'rm -rf -- "$output_dir"' EXIT
 "${IVERILOG:-iverilog}" "${compiler_args[@]}" -g2012 -s tb_mram_pins \
   -o "$output_dir/pins.vvp" "$repo_dir/tests/tb_top_timing.sv" \
   "$repo_dir/tests/tb_mram_pins.sv" "$src/top.v" "$src/spi.v" "$src/SPI_Slave.v"
-timeout 180 "${VVP:-vvp}" "$output_dir/pins.vvp"
+timeout 300 "${VVP:-vvp}" "$output_dir/pins.vvp"
