@@ -33,7 +33,15 @@ module tb_mram_pins;
   top dut(.clkp(clk),.clkn(~clk),.rst_n(rst_n),.spi_sclk(sclk),
     .spi_cs_n(cs_n),.spi_mosi(mosi),.spi_miso(miso),.A(address),
     .DQ(dq),.EN(en),.WN(wn),.GN(gn),.UBN(ub),.LBN(lb));
+  reg [42:0] expected_pad;
   always @(posedge clk) begin
+    expected_pad={dut.pad_cmd_en,dut.pad_cmd_wn,dut.pad_cmd_gn,dut.pad_cmd_ubn,dut.pad_cmd_lbn,dut.pad_cmd_addr,dut.pad_cmd_dq_write};
+    if(checking && rst_n && dut.flg && !dut.detail_stall && !dut.read_pipeline_flush) begin
+      if(dut.period_event!==dut.period_match) $fatal(1,"Predicted period pulse diverged");
+      if(dut.hold_before_two && !dut.count_restart &&
+         (dut.count_wrap_cached!==dut.count_wrap_raw || dut.count_less_cached!==dut.addr_count_less))
+        $fatal(1,"Cached count boundary was not ready at P-2");
+    end
     clock_no=clock_no+1;
     compare_now=checking && rst_n && !dut.detail_stall && dut.read_compare_valid;
     sample_now=checking && rst_n && !dut.detail_stall && dut.read_sample_valid;
@@ -57,13 +65,12 @@ module tb_mram_pins;
     end
     if(!rst_n || !checking) begin previous_flg=0;previous_write=0;end
     else begin
-      if({en,wn,gn,ub,lb}!=={dut.debug_en,dut.debug_wn,dut.debug_gn,dut.debug_ubn,dut.debug_lbn} ||
-         address!==dut.debug_addr || dut.dq_write_data!==dut.debug_dq_write)
-        $fatal(1,"IOB output and same-edge fabric copy diverged");
+      if({en,wn,gn,ub,lb,address,dut.dq_write_data}!==expected_pad)
+        $fatal(1,"IOB output did not follow the registered command");
       if(dut.addr_compare_count!==dut.addr_cnt ||
          dut.hold_release_count!==dut.addr_hold_cnt || dut.hold_sample_count!==dut.addr_hold_cnt)
         $fatal(1,"Replicated counters diverged");
-      if(dut.flg) begin
+      if(dut.pad_active) begin
         if(!previous_flg) begin tick=0;started=started+1;end
         else tick=tick+1;
         read_period=(read_cfg==1 && period_cfg<8)?8:period_cfg;
@@ -111,7 +118,7 @@ module tb_mram_pins;
           sample_expected[launched]=(offset%2==0)?16'h5a5a:16'ha5a5;
           launched=launched+1;
         end
-        if(read_phase && !dut.rd_en_d2) $fatal(1,"Read bus direction lagged pin cycle");
+        if(read_phase && !dut.pad_read) $fatal(1,"Read bus direction lagged pin cycle");
         if(previous_write && !(!en && !wn && (!ub || !lb))) write_ends=write_ends+1;
         previous_write=(!en && !wn && (!ub || !lb));
         pin_checks=pin_checks+1;
@@ -125,7 +132,7 @@ module tb_mram_pins;
           $fatal(1,"Idle interface was not released");
         previous_write=0;
       end
-      previous_flg=dut.flg;
+      previous_flg=dut.pad_active;
     end
   end
   task byte_io(input [7:0] value,output [7:0] result);

@@ -30,7 +30,7 @@ module tb_top_spi_reports;
       cfg[0]=8'h55;cfg[1]=8'h83;cfg[2]=mode;cfg[3]=5;
       cfg[8]=4;cfg[12]=count;cfg[16]=7;
       // Write/read mode exercises unequal periods: invalid-write fallback 10,
-      // configured read period 7. Other modes retain normal write mode 1.
+      // configured read period 7 (Read2 clamps it to 8). Other modes retain normal write mode 1.
       cfg[17]=(mode==2)?3:1;cfg[18]=1;
       checksum=0;
       for(n=1;n<=21;n=n+1) checksum=checksum+cfg[n];

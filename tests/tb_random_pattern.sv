@@ -27,7 +27,7 @@ module tb_random_pattern;
   top dut(.clkp(clk),.clkn(~clk),.rst_n(rst_n),.spi_sclk(sclk),
     .spi_cs_n(cs_n),.spi_mosi(mosi),.spi_miso(miso),.A(address),
     .DQ(dq),.EN(en),.WN(wn));
-  assign dq=(dut.rd_en_d2 && dut.flg)?read_value:16'hzzzz;
+  assign dq=(dut.pad_read && dut.pad_active)?read_value:16'hzzzz;
   function [15:0] golden(input integer round_no,input integer offset);
     reg [31:0] value;
     begin
@@ -36,7 +36,7 @@ module tb_random_pattern;
     end
   endfunction
   always @(posedge wn) begin
-    if(active && rst_n && !en && !dut.rd_en_d2 && address>=BASE && address<BASE+length_cfg) begin
+    if(active && rst_n && !en && !dut.pad_read && address>=BASE && address<BASE+length_cfg) begin
       idx=address-BASE;loop_no=dut.loop_idx;
       if(loop_no>1 || seen[loop_no][idx]!=0) $fatal(1,"Duplicate/random write loop=%0d addr=%h data=%h count=%0d h=%0d rd=%b/%b/%b finish=%b keep=%b",loop_no,address,dq,dut.addr_cnt,dut.addr_hold_cnt,dut.rd_en,dut.rd_en_d,dut.rd_en_d2,dut.loop_finish,dut.keep);
       want=golden(loop_no,idx);

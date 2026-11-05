@@ -40,7 +40,9 @@ proc mram_collect_spi_timing {repo_root} {
     # registers in the 16:45 bundle). Count only actual FD* flip-flops.
     set mram_io_regs [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && (NAME =~ *addr_d_reg* || NAME =~ *R_EN_reg || NAME =~ *R_WN_reg || NAME =~ *R_GN_reg || NAME =~ *R_UBN_reg || NAME =~ *R_LBN_reg || NAME =~ *dq_write_data_reg* || NAME =~ *dq_read_data_reg* || NAME =~ *dq_tristate_reg*)}]
     puts $metadata "MRAM IOB register candidates (expected 75): [llength $mram_io_regs]"
-    puts $metadata "Same-edge output fabric-copy registers (expected 43): [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && (NAME =~ *debug_addr_reg* || NAME =~ *debug_dq_write_reg* || NAME =~ *debug_en_reg || NAME =~ *debug_wn_reg || NAME =~ *debug_gn_reg || NAME =~ *debug_ubn_reg || NAME =~ *debug_lbn_reg)}]]"
+    puts $metadata "Registered output-command FFs (expected 44): [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *pad_cmd*reg*}]]"
+    puts $metadata "Registered period-event FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *period_event_reg*}]]"
+    puts $metadata "ILA/debug-hub cells (expected 0): [llength [get_cells -quiet -hierarchical -filter {NAME =~ u_ila_0 || NAME =~ u_ila_0/* || NAME =~ dbg_hub || NAME =~ dbg_hub/*}]]"
     puts $metadata "Inspect LOC/BEL below; IOB=TRUE alone does not prove packing."
     set placed_in_io 0
     set placed_in_slice 0

@@ -28,7 +28,15 @@ module tb_top_detail;
   initial begin
     force dut.RD_DATA=injected_data;
   end
+  reg [42:0] expected_pad;
   always @(posedge clk) begin
+    expected_pad={dut.pad_cmd_en,dut.pad_cmd_wn,dut.pad_cmd_gn,dut.pad_cmd_ubn,dut.pad_cmd_lbn,dut.pad_cmd_addr,dut.pad_cmd_dq_write};
+    if(active && rst_n && dut.flg && !dut.detail_stall && !dut.read_pipeline_flush) begin
+      if(dut.period_event!==dut.period_match) $fatal(1,"Predicted period pulse diverged");
+      if(dut.hold_before_two && !dut.count_restart &&
+         (dut.count_wrap_cached!==dut.count_wrap_raw || dut.count_less_cached!==dut.addr_count_less))
+        $fatal(1,"Cached count boundary was not ready at P-2");
+    end
     detected=0;
     if(active && rst_n) begin
       if(dut.send_frame_ack) begin
@@ -57,10 +65,8 @@ module tb_top_detail;
     end
     #1;
     if(active && rst_n) begin
-      if({dut.R_EN,dut.R_WN,dut.R_GN,dut.R_UBN,dut.R_LBN}!==
-         {dut.debug_en,dut.debug_wn,dut.debug_gn,dut.debug_ubn,dut.debug_lbn} ||
-         dut.addr_d!==dut.debug_addr || dut.dq_write_data!==dut.debug_dq_write)
-        $fatal(1,"IOB/fabric copies diverged during detail pause or replacement");
+      if({dut.R_EN,dut.R_WN,dut.R_GN,dut.R_UBN,dut.R_LBN,dut.addr_d,dut.dq_write_data}!==expected_pad)
+        $fatal(1,"IOB did not follow command during detail traffic or replacement");
       if(dut.addr_compare_count!==dut.addr_cnt) $fatal(1,"Address replica diverged during detail control");
       if(dut.hold_release_count!==dut.addr_hold_cnt || dut.hold_sample_count!==dut.addr_hold_cnt)
         $fatal(1,"Timer replicas diverged during detail/start/loop control");
@@ -70,7 +76,7 @@ module tb_top_detail;
       if(dut.loop_idx>acks) $fatal(1,"Loop advanced without summary ACK");
       // Independent active-cycle contract: no error, full queue or host poll
       // is allowed to stretch an address or a CE/WE/OE/BN pulse.
-      if(dut.flg) begin
+      if(dut.pad_active) begin
         engine_tick=prior_flg?engine_tick+1:0;
         read_period=(read_cfg==1 && period_cfg<8)?8:period_cfg;
         write_cycles=length_cfg*period_cfg;
@@ -94,7 +100,7 @@ module tb_top_detail;
           $fatal(1,"Error/queue changed active pin timing case=%0d loop=%0d tick=%0d",case_no,dut.loop_idx,engine_tick);
       end else if(prior_flg && engine_tick+1!=total_cycles)
         $fatal(1,"Error/queue changed active loop duration");
-      prior_flg=dut.flg;
+      prior_flg=dut.pad_active;
     end else prior_flg=0;
   end
   task byte_io(input [7:0] data,output [7:0] result);

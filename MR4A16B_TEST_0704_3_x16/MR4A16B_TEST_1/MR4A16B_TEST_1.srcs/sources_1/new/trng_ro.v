@@ -25,8 +25,8 @@ module trng_8bit #(
         else begin ro_meta<=ro_taps;ro_sync<=ro_meta;end
     end
     reg [SAMPLE_LOG2-1:0] sample_counter;
-    (* mark_debug="true" *) wire sample_tick=&sample_counter;
-    (* mark_debug="true" *) wire raw_bit=^ro_sync;
+     wire sample_tick=&sample_counter;
+     wire raw_bit=^ro_sync;
     reg previous_raw,have_raw,pair_pending,pair_first;
     reg source_qualified;
     reg [7:0] repetition_count,window_count;

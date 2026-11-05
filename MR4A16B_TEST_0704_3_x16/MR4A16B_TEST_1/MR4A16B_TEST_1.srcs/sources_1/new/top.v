@@ -19,7 +19,7 @@ module top(
     output UBN,
     output LBN,
     output [21:0] A,
-    (*mark_debug="true"*)output reg err_flg
+    output reg err_flg
 );
 
 wire clk;
@@ -143,18 +143,20 @@ reg [3:0]   vio_TMODE_D2    ;
 (* IOB="true", dont_touch="true" *) reg R_LBN;
 // Separate IOB data and tri-state registers; no mux follows the last FFs.
 (* IOB="true", dont_touch="true" *) reg [15:0] dq_write_data;
-// Same-edge fabric copies provide state feedback and ILA observation. Physical
-// output FF Q drives ONLY the pad, so output packing need not retain feedback.
-(* IOB="false", dont_touch="true", mark_debug="true" *) reg [15:0] debug_dq_write;
-(* IOB="false", dont_touch="true", mark_debug="true" *) reg [21:0] debug_addr;
-(* IOB="false", dont_touch="true", mark_debug="true" *) reg debug_en,debug_wn,debug_gn,debug_ubn,debug_lbn;
+// Registered fabric commands drive the OLOGIC on the following clock.
+// Pad FF Q drives only the pin; no wide decode remains on its D path.
+(* IOB="false", dont_touch="true" *) reg [15:0] pad_cmd_dq_write;
+(* IOB="false", dont_touch="true" *) reg [21:0] pad_cmd_addr;
+(* IOB="false", dont_touch="true" *) reg pad_cmd_en,pad_cmd_wn,pad_cmd_gn,pad_cmd_ubn,pad_cmd_lbn;
 reg [15:0] dq_write_next;
 reg [21:0] addr_pad_next;
 // Prevent synthesis from re-extracting an address-dependent clock enable.
 // One T flip-flop per pad, kept distinct so Vivado can pack every DQ IOB.
 (* IOB="true", dont_touch="true" *) reg [15:0] dq_tristate;
 wire dq_drive = !dq_tristate[0];
-(* IOB="true", dont_touch="true", mark_debug="true" *) reg [15:0] dq_read_data;
+(* IOB="false",dont_touch="true" *) reg pad_cmd_tristate;
+reg pad_active,pad_read;
+(* IOB="true", dont_touch="true" *) reg [15:0] dq_read_data;
 always @(posedge clk) begin
     dq_read_data <= RD_DATA; // free-running IFF; qualified captures use read_sample_valid
 end
@@ -167,13 +169,13 @@ reg [15:0]  dout_d2;
 reg [15:0]  dout_ref;
 reg [21:0] dout_ref_addr;
 wire spi_detail_stall;
-(* mark_debug="true" *) wire detail_fifo_overflow;
-(* mark_debug="true" *) wire [31:0] detail_dropped_count;
-(* mark_debug="true" *) wire random_seed_wait;
+ wire detail_fifo_overflow;
+ wire [31:0] detail_dropped_count;
+ wire random_seed_wait;
 wire detail_stall = spi_detail_stall || random_seed_wait;
-(* mark_debug="true" *) wire trng_seed_ready,trng_seed_fault;
+ wire trng_seed_ready,trng_seed_fault;
 wire [31:0] trng_seed_data;
-(* mark_debug="true" *) reg [31:0] random_test_seed;
+ reg [31:0] random_test_seed;
 reg [21:0] error_ref_addr_sample, error_current_addr_sample;
 reg [15:0] error_data_snapshot;
 reg [15:0] error_ref_sample, error_current_sample;
@@ -183,27 +185,28 @@ wire [15:0] error_expected_snapshot = error_uses_reference ? error_ref_sample : 
 
 (* extract_enable="no" *) reg [21:0] addr;
 (* IOB="true", dont_touch="true" *) reg [21:0] addr_d;
-(* mark_debug="true",keep="true",dont_touch="true" *) reg [22:0] addr_cnt;
+(* keep="true", dont_touch="true" *) reg [22:0] addr_cnt;
 // Same-edge comparison copy: isolate range/terminal logic from address-data
-// and ILA loads without introducing a pipeline or changing the count value.
+// loads without introducing a pipeline or changing the count value.
 (* keep="true",dont_touch="true" *) reg [22:0] addr_compare_count;
 reg [22:0]  addr_cnt_d;                                                        
 // Separate synchronous copies place timer loads near the control, pin-release,
 // and error/IO-assertion logic. Each copy executes the SAME update on the SAME
 // edge, including pause/reset/start; this is replication, not a pipeline.
-(* mark_debug="true", keep="true", dont_touch="true" *) reg [20:0] addr_hold_cnt;
+(* keep="true", dont_touch="true" *) reg [20:0] addr_hold_cnt;
 (* keep="true", dont_touch="true" *) reg [20:0] hold_release_count;
 (* keep="true", dont_touch="true" *) reg [20:0] hold_sample_count;
-(*mark_debug="true"*)reg [31:0]  err_cnt; 
+reg [31:0]  err_cnt;
 
-(*mark_debug="true"*)reg     keep ;
-(*mark_debug="true"*)reg     flg  ;
+reg     keep ;
+reg     flg  ;
 reg flg_next;
 
 reg         rd_en           ;
 reg         rd_en_d         ;
 reg         rd_en_d2        ;
-// At most two reads overlap: minimum period 7 clocks, capture latency 8/9.
+// At most two reads overlap: period >=7 clocks, capture 8/9 after the pad
+// starts (9/10 after the command, including the output register pipeline).
 // Payloads remain paired with their launch address even after A has advanced.
 reg [1:0] read_valid;
 reg [3:0] read_delay_0, read_delay_1;
@@ -211,14 +214,16 @@ reg read_next_bank;
 reg [21:0] read_address_0, read_address_1;
 reg [15:0] read_expected_0, read_expected_1;
 reg read_drain;
-(* mark_debug="true" *) reg read_compare_valid;
+ reg read_compare_valid;
 reg read_compare_bank;
 wire read_due_0 = read_valid[0] && (read_delay_0==4'd1);
 wire read_due_1 = read_valid[1] && (read_delay_1==4'd1);
-(* mark_debug="true" *) wire read_sample_valid = read_due_0 || read_due_1;
+ wire read_sample_valid = read_due_0 || read_due_1;
 wire read_pending = |read_valid;
-wire read_remaining_after_tick = (read_valid[0] && read_delay_0>4'd1) ||
-                                 (read_valid[1] && read_delay_1>4'd1);
+// The pad pipeline releases one edge after flg drops. Issue idle one edge
+// before the final IFF capture; actual pins remain valid THROUGH that capture.
+wire read_remaining_after_tick = (read_valid[0] && read_delay_0>4'd2) ||
+                                 (read_valid[1] && read_delay_1>4'd2);
 
 wire        start           ;// 连接spi_start_test信号，解析成功后开始测试（仅第一个循环出现）
 reg         start_d1        ;
@@ -227,20 +232,20 @@ reg         start_d3        ;
 reg         start_d4        ;
 reg         stop            ;
 
-(*mark_debug="true"*)wire send_frame_ack;    // 从 spi_protocol 输出的发送完成确认
-(*mark_debug="true"*)reg  frame_ack_latched; 
+wire send_frame_ack;    // 从 spi_protocol 输出的发送完成确认
+reg  frame_ack_latched;
 
 wire [31:0]  loop_count ;
-(*mark_debug="true"*)reg  [31:0]  loop_idx ;
-(*mark_debug="true"*)reg          loop_finish;           // 当前循环结束，等待发送确认
+reg  [31:0]  loop_idx ;
+reg          loop_finish;           // 当前循环结束，等待发送确认
 reg          loop_finish_d1;
-(*mark_debug="true"*)reg          loop_done;           // 所有循环完成标志
+reg          loop_done;           // 所有循环完成标志
 
 //reg   next_loop_start;
 // Emit this event with the loop update, avoiding a 32-bit change detector.
-(*mark_debug="true"*)reg   next_loop_start_d1;
-(*mark_debug="true"*)reg   next_loop_start_d2;
-(*mark_debug="true"*)reg   next_loop_start_d3;
+reg   next_loop_start_d1;
+reg   next_loop_start_d2;
+reg   next_loop_start_d3;
 
 
 // The configuration decoder commits these thresholds together with the base
@@ -317,7 +322,7 @@ wire lb_release_match = rd_en_d2 ? lb_release_r_match : lb_release_w_match;
 wire late_match;
 mram_equal_lut eq_late(.a(hold_sample_count),.b({5'b0,spi_t_avqv_r}),.match(late_match));
 wire current_is_initial, addr_count_equal;
-mram_equal_lut #(.WIDTH(22)) eq_current_initial(.a(debug_addr),.b({2'b0,vio_addr_ini}),.match(current_is_initial));
+mram_equal_lut #(.WIDTH(22)) eq_current_initial(.a(pad_cmd_addr),.b({2'b0,vio_addr_ini}),.match(current_is_initial));
 mram_equal_lut #(.WIDTH(23)) eq_count_length(.a(addr_compare_count),.b({2'b0,vio_addr_num}),.match(addr_count_equal));
 wire actual_equals_reference, actual_equals_current;
 mram_equal_lut #(.WIDTH(16)) eq_actual_reference(.a(dq_read_data),.b(read_expected_0),.match(actual_equals_reference));
@@ -434,7 +439,7 @@ spi_protocol u_spi_protocol (
     
     // 给spi模块的参数
     .current_loop(loop_idx),
-    .test_busy(flg || read_pending || read_compare_valid || err_flg),
+    .test_busy(flg || pad_active || read_pending || read_compare_valid || err_flg),
     .error_cnt(err_cnt),
     .err_flag(err_flg),
     .error_addr(error_addr_snapshot),
@@ -669,10 +674,18 @@ end
 wire count_restart = (start_d1 != start_d2) || next_loop_start_d1;
 // A single address wraps only at the write->read turnaround. Pure write/read
 // and the final read must advance to length, so the engine stops after one cycle.
-wire count_wrap = keep && addr_is_last &&
+wire count_wrap_raw = keep && addr_is_last &&
     ((vio_addr_num!=21'd1) || (vio_TMODE==4'd2 && !rd_en_d));
+(* keep="true" *) reg count_wrap_cached,count_less_cached;
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) begin count_wrap_cached<=0;count_less_cached<=0;end
+    else if(!detail_stall) begin
+        count_wrap_cached<=count_wrap_raw;count_less_cached<=addr_count_less;
+    end
+end
+wire count_wrap=count_wrap_cached;
 (* keep="true",max_fanout=24 *) wire count_update_enable = !detail_stall &&
-    (count_restart || (hold_before_two && (count_wrap || addr_count_less)));
+    (count_restart || (hold_before_two && (count_wrap || count_less_cached)));
 (* keep="true", max_fanout=12 *) wire count_clear_data = count_restart || count_wrap;
 always @(posedge clk or negedge rstn) begin
     if (!rstn)
@@ -696,18 +709,26 @@ end
 // passes through the load-one expression before clearing every counter bit.
 wire hold_restart_event = (next_loop_start_d2 && !next_loop_start_d3) ||
                           (start_d2 && !start_d3);
-(* keep="true" *) wire hold_reinitialize = hold_restart_event || period_match;
+(* keep="true",max_fanout=24 *) reg period_event;
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) period_event<=0;
+    else if(!detail_stall) begin
+        if(next_loop_start_d1 || hold_restart_event || period_event) period_event<=0;
+        else period_event<=hold_before_one;
+    end
+end
+(* keep="true" *) wire hold_reinitialize = hold_restart_event || period_event;
 (* keep="true",max_fanout=24 *) wire hold_high_run =
-    !next_loop_start_d1 && !hold_restart_event && !period_match;
+    !next_loop_start_d1 && !hold_restart_event && !period_event;
 wire hold_initial_bit = hold_restart_event || addr_count_less;
 // Do not invent a new cycle at the final period boundary: pending samples
 // drain while the final address and read direction are retained.
 (* keep="true" *) wire io_cycle_start = hold_restart_event ||
-    (flg && period_match && !addr_count_equal);
+    (flg && period_event && !addr_count_equal);
 wire read_pipeline_flush = spi_start_test || random_seed_wait ||
     (start_d1 && !start_d2) || next_loop_start_d1;
 wire read_launch = io_cycle_start && rd_en_d && !read_pipeline_flush;
-wire read_end = flg && addr_count_equal && period_match;
+wire read_end = flg && addr_count_equal && period_event;
 always @(posedge clk or negedge rstn) begin
     if(!rstn) begin
         read_valid<=2'b00;read_next_bank<=0;
@@ -728,10 +749,10 @@ always @(posedge clk or negedge rstn) begin
         if(read_launch) begin
             read_next_bank<=!read_next_bank;
             if(!read_next_bank) begin
-                read_valid[0]<=1;read_delay_0<=spi_t_avqv_r[3:0];
+                read_valid[0]<=1;read_delay_0<=spi_t_avqv_r[3:0]+4'd1;
                 read_address_0<=addr;read_expected_0<=dout;
             end else begin
-                read_valid[1]<=1;read_delay_1<=spi_t_avqv_r[3:0];
+                read_valid[1]<=1;read_delay_1<=spi_t_avqv_r[3:0]+4'd1;
                 read_address_1<=addr;read_expected_1<=dout;
             end
         end
@@ -822,15 +843,19 @@ always @(posedge clk or negedge rstn) begin
     if(!rstn) flg<=0;
     else flg<=flg_next;
 end
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) begin pad_active<=0;pad_read<=0;end
+    else begin pad_active<=flg;pad_read<=rd_en_d2;end
+end
 // A has no mux after this last register. Idle/stall/start choices are on D.
 always @* begin
-    addr_pad_next=debug_addr;
+    addr_pad_next=pad_cmd_addr;
     if(!flg_next) addr_pad_next=0;
     else if(!detail_stall) addr_pad_next=addr;
 end
 always @(posedge clk or negedge rstn) begin
-    if(!rstn) begin addr_d<=0;debug_addr<=0;end
-    else begin addr_d<=addr_pad_next;debug_addr<=addr_pad_next;end
+    if(!rstn) begin addr_d<=0;pad_cmd_addr<=0;end
+    else begin addr_d<=pad_cmd_addr;pad_cmd_addr<=addr_pad_next;end
 end
 
 //---
@@ -839,7 +864,7 @@ always @(posedge clk or negedge rstn) begin
         dout_ref <= 16'h0;
     else if(detail_stall)
         dout_ref <= dout_ref;
-    else if(period_match)
+    else if(period_event)
         dout_ref <= dout_d1;
     else
         dout_ref <= dout_ref;
@@ -851,8 +876,8 @@ end
 always @(posedge clk or negedge rstn) begin
     if (!rstn)
         dout_ref_addr <= 22'd0;
-    else if (!detail_stall && period_match)
-        dout_ref_addr <= debug_addr;
+    else if (!detail_stall && period_event)
+        dout_ref_addr <= pad_cmd_addr;
 end
 
 // Sample both possible comparison operands on every running clock. The
@@ -970,7 +995,7 @@ end
 // detector is used: address zero and a one-address repeated loop work alike.
 reg en_pad_next;
 always @* begin
-    en_pad_next=debug_en;
+    en_pad_next=pad_cmd_en;
     if(!flg_next) en_pad_next=1'b1;
     else if(!detail_stall) begin
         if(io_cycle_start) en_pad_next=(vio_t_EH2EL!=16'd0);
@@ -979,14 +1004,14 @@ always @* begin
     end
 end
 always @(posedge clk or negedge rstn) begin
-    if(!rstn) begin R_EN<=1'b1;debug_en<=1'b1;end
-    else begin R_EN<=en_pad_next;debug_en<=en_pad_next;end
+    if(!rstn) begin R_EN<=1'b1;pad_cmd_en<=1'b1;end
+    else begin R_EN<=pad_cmd_en;pad_cmd_en<=en_pad_next;end
 end
 
 //---
 reg wn_pad_next;
 always @* begin
-    wn_pad_next=debug_wn;
+    wn_pad_next=pad_cmd_wn;
     if(!flg_next || io_read_next) wn_pad_next=1'b1;
     else if(!detail_stall) begin
         if(io_cycle_start) wn_pad_next=rd_en_d || (vio_t_WH2WL!=16'd0);
@@ -995,14 +1020,14 @@ always @* begin
     end
 end
 always @(posedge clk or negedge rstn) begin
-    if(!rstn) begin R_WN<=1'b1;debug_wn<=1'b1;end
-    else begin R_WN<=wn_pad_next;debug_wn<=wn_pad_next;end
+    if(!rstn) begin R_WN<=1'b1;pad_cmd_wn<=1'b1;end
+    else begin R_WN<=pad_cmd_wn;pad_cmd_wn<=wn_pad_next;end
 end
 
 //---
 reg gn_pad_next;
 always @* begin
-    gn_pad_next=debug_gn;
+    gn_pad_next=pad_cmd_gn;
     if(!flg_next || !io_read_next) gn_pad_next=1'b1;
     else if(!detail_stall) begin
         if(io_cycle_start) gn_pad_next=!rd_en_d || (vio_t_GH2GL!=16'd0);
@@ -1011,14 +1036,14 @@ always @* begin
     end
 end
 always @(posedge clk or negedge rstn) begin
-    if(!rstn) begin R_GN<=1'b1;debug_gn<=1'b1;end
-    else begin R_GN<=gn_pad_next;debug_gn<=gn_pad_next;end
+    if(!rstn) begin R_GN<=1'b1;pad_cmd_gn<=1'b1;end
+    else begin R_GN<=pad_cmd_gn;pad_cmd_gn<=gn_pad_next;end
 end
 
 //---
 reg ubn_pad_next;
 always @* begin
-    ubn_pad_next=debug_ubn;
+    ubn_pad_next=pad_cmd_ubn;
     if(!flg_next) ubn_pad_next=1'b1;
     else if(!detail_stall) begin
         if(io_cycle_start) ubn_pad_next=(vio_t_UBH2UBL!=16'd0);
@@ -1027,14 +1052,14 @@ always @* begin
     end
 end
 always @(posedge clk or negedge rstn) begin
-    if(!rstn) begin R_UBN<=1'b1;debug_ubn<=1'b1;end
-    else begin R_UBN<=ubn_pad_next;debug_ubn<=ubn_pad_next;end
+    if(!rstn) begin R_UBN<=1'b1;pad_cmd_ubn<=1'b1;end
+    else begin R_UBN<=pad_cmd_ubn;pad_cmd_ubn<=ubn_pad_next;end
 end
 
 //---
 reg lbn_pad_next;
 always @* begin
-    lbn_pad_next=debug_lbn;
+    lbn_pad_next=pad_cmd_lbn;
     if(!flg_next) lbn_pad_next=1'b1;
     else if(!detail_stall) begin
         if(io_cycle_start) lbn_pad_next=(vio_t_LBH2LBL!=16'd0);
@@ -1043,8 +1068,8 @@ always @* begin
     end
 end
 always @(posedge clk or negedge rstn) begin
-    if(!rstn) begin R_LBN<=1'b1;debug_lbn<=1'b1;end
-    else begin R_LBN<=lbn_pad_next;debug_lbn<=lbn_pad_next;end
+    if(!rstn) begin R_LBN<=1'b1;pad_cmd_lbn<=1'b1;end
+    else begin R_LBN<=pad_cmd_lbn;pad_cmd_lbn<=lbn_pad_next;end
 end
 
 //---
@@ -1053,19 +1078,22 @@ end
 wire dq_write_event = (vio_t_AV2DV==16'd0 && io_cycle_start) ||
     (vio_t_AV2DV!=16'd0 && flg && hold_sample_count==vio_t_AV2DV);
 always @* begin
-    dq_write_next=debug_dq_write;
+    dq_write_next=pad_cmd_dq_write;
     if(!detail_stall && !rd_en_d) begin
         if(dq_write_event) dq_write_next=dout;
-        else if(period_match) dq_write_next=16'd0;
+        else if(period_event) dq_write_next=16'd0;
     end
 end
 always @(posedge clk or negedge rstn) begin
-    if(!rstn) begin dq_write_data<=0;debug_dq_write<=0;end
-    else begin dq_write_data<=dq_write_next;debug_dq_write<=dq_write_next;end
+    if(!rstn) begin dq_write_data<=0;pad_cmd_dq_write<=0;end
+    else begin dq_write_data<=pad_cmd_dq_write;pad_cmd_dq_write<=dq_write_next;end
 end
 always @(posedge clk or negedge rstn) begin
-    if(!rstn) dq_tristate<=16'hffff;
-    else dq_tristate<={16{!flg_next || io_read_next}};
+    if(!rstn) begin dq_tristate<=16'hffff;pad_cmd_tristate<=1'b1;end
+    else begin
+        dq_tristate<={16{pad_cmd_tristate}};
+        pad_cmd_tristate<=!flg_next || io_read_next;
+    end
 end
 
 
@@ -1079,7 +1107,7 @@ always @(posedge clk or negedge rstn) begin
     else if(start_d2 == 0 && start_d1 == 1) begin
         keep <= 1'b1;                      // 测试开始允许地址访问
     end
-    else if(loop_done && period_match) begin
+    else if(loop_done && period_event) begin
         keep <= 1'b0;                      // 全部循环完成停止
     end
     else if(loop_finish) begin

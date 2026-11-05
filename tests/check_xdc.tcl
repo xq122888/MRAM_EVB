@@ -124,31 +124,15 @@ foreach command {get_nets get_pins create_clock create_debug_core get_debug_core
 foreach filename {timing.xdc debug.xdc} {
     interp invokehidden xdc source [file join $constr_dir $filename]
 }
-if {$loop_count != 45 || $meta_count != 5 || $hub_frequency != 200000000 ||
-    [llength [dict keys $ports u_ila_0/probe*]] != 34} {
-    error "Incomplete timing/debug configuration"
+if {$loop_count != 45 || $meta_count != 5} {error "Incomplete functional timing constraints"}
+if {[dict size $cores]!=0 || [dict size $ports]!=0 || [dict size $connections]!=0 || $hub_frequency!=0} {
+    error "ILA/debug_hub must not be created"
 }
-if {[lindex [dict get $connections u_ila_0/probe1] 0] ne {dq_read_data[0]} || [lindex [dict get $connections u_ila_0/probe1] 15] ne {dq_read_data[15]}} {
-    error "DQ probe must observe the IOB input-register data"
+set src_dir [file join $repo_root MR4A16B_TEST_0704_3_x16 MR4A16B_TEST_1 MR4A16B_TEST_1.srcs sources_1 new]
+foreach filename {top.v spi.v SPI_Slave.v trng_ro.v} {
+    set fp [open [file join $src_dir $filename] r]
+    set rtl [read $fp]
+    close $fp
+    if {[regexp -nocase {mark_debug[[:space:]]*=} $rtl]} {error "Debug preservation remains in $filename"}
 }
-for {set bit 0} {$bit < 16} {incr bit} {
-    if {[lindex [dict get $connections u_ila_0/probe4] $bit] ne [format {debug_dq_write[%d]} $bit]} {
-        error "DQ output probe must observe all 16 same-edge fabric copy bits in order"
-    }
-}
-for {set bit 0} {$bit < 22} {incr bit} {
-    if {[lindex [dict get $connections u_ila_0/probe2] $bit] ne [format {debug_addr[%d]} $bit]} {
-        error "Address probe must observe the same-edge fabric copy"
-    }
-}
-foreach {probe net} {9 debug_en 13 debug_gn 15 debug_lbn 30 debug_ubn 31 debug_wn} {
-    if {[dict get $connections u_ila_0/probe$probe] ne $net} {error "Control probe must observe a same-edge fabric copy"}
-}
-if {[dict get $connections u_ila_0/probe32] ne "detail_fifo_overflow"} {error "Missing FIFO overflow probe"}
-for {set bit 0} {$bit < 32} {incr bit} {
-    if {[lindex [dict get $connections u_ila_0/probe33] $bit] ne [format {detail_dropped_count[%d]} $bit]} {error "Missing dropped-record count bit"}
-}
-if {[dict get $connections u_ila_0/probe18] ne "spi_miso_OBUF"} {
-    error "MISO probe must observe the actual protocol output"
-}
-puts "PASS: restricted XDC commands; 45 RO nets, 5 first-stage D pins, 34 ordered ILA probes, registered DQ input/output and 200 MHz debug clock"
+puts "PASS: 200 MHz, 45 RO nets, 5 first-stage D pins; no ILA/debug_hub or MARK_DEBUG"

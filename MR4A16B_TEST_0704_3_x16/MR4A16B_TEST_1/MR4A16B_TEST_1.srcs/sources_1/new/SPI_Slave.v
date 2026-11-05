@@ -13,11 +13,11 @@ module SPI_Slave
 	input								clk			,	//system clk
 	input								rst_n		,	//system reset
 	input		[DATA_WIDTH-1:0]		data_in		,	//the data sent by miso
-	(*mark_debug="true"*)input								sclk		,	//spi bus sclk
-	(*mark_debug="true"*)input								cs_n		,	//spi bus slave select line
-	(*mark_debug="true"*)input								mosi		,	//spi bus mosi input
-	(*mark_debug="true"*)output								miso		,	//spi bus miso output
-	(*mark_debug="true"*)output								data_valid	,	//the data received by mosi valid
+	input								sclk		,	//spi bus sclk
+	input								cs_n		,	//spi bus slave select line
+	input								mosi		,	//spi bus mosi input
+	output								miso		,	//spi bus miso output
+	output								data_valid	,	//the data received by mosi valid
 	output	reg	[DATA_WIDTH-1:0]		data_out	,	//the data received by mosi,valid when data_valid is high
 	
 	// ====== 新增：SPI时钟边沿输出信号 ======

@@ -86,9 +86,9 @@ module spi_protocol #(
     // 控制信号
     output reg start_test,
     output reg start_test_d1,
-    (*mark_debug="true"*)output reg stop_test,
-    (*mark_debug="true"*)output reg stop_cmd_match,
-    (*mark_debug="true"*)output reg tx_done_pulse,
+    output reg stop_test,
+    output reg stop_cmd_match,
+    output reg tx_done_pulse,
     // Nonblocking detail queue diagnostics; only summary frames ACK loops.
     output wire detail_stall,
     output wire detail_overflow,
@@ -151,8 +151,8 @@ SPI_Slave #(
 reg spi_data_valid_d1;
 reg rx_valid_d1, rx_valid_d2;
 reg test_complete_d1;
-(*mark_debug="true"*)reg tx_sending;
-(*mark_debug="true"*)reg tx_sending_d1;
+reg tx_sending;
+reg tx_sending_d1;
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -216,7 +216,7 @@ end
 // =========================================================================
 reg [23:0] stop_cmd_buffer;
 reg        stop_cmd_detected;
-(*mark_debug="true"*)reg        send_stop_flag; // 用于下方的清除逻辑
+reg        send_stop_flag; // 用于下方的清除逻辑
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -607,7 +607,13 @@ always @(posedge clk or negedge rst_n) begin
     if (!rst_n) report_start_guard <= 4'd0;
     else report_start_guard <= {report_start_guard[2:0],(start_test || valid_start_request)};
 end
-wire report_restart = start_test || valid_start_request || (|report_start_guard);
+// Isolate byte-completion/checksum decoding from the wide TX reset enables.
+// config_commit already cancels the prior frame a full byte before start.
+(* keep="true",max_fanout=32 *) reg report_restart;
+always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) report_restart<=1'b0;
+    else report_restart<=start_test || valid_start_request || (|report_start_guard);
+end
 reg        detail_frame_acked;
 // The RAM holds the index/address/actual/expected payload (86 bits). One loop
 // is drained before its summary ACK advances current_loop, so common header
@@ -621,7 +627,11 @@ wire [31:0] detail_index = detail_record[85:54];
 wire [21:0] detail_address = detail_record[53:32];
 wire [15:0] detail_actual = detail_record[31:16];
 wire [15:0] detail_expected = detail_record[15:0];
-wire detail_fifo_clear = config_commit || report_restart || test_frame_acked;
+reg detail_fifo_clear;
+always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) detail_fifo_clear<=1'b1;
+    else detail_fifo_clear<=config_commit || report_restart || test_frame_acked;
+end
 wire [31:0] incoming_detail_index = error_cnt + 32'd1;
 // Logging never exerts backpressure on the memory engine, even when full.
 assign detail_stall = 1'b0;
@@ -849,8 +859,8 @@ module mram_detail_fifo #(parameter ADDR_BITS=12)(
     output reg head_valid,
     output reg [85:0] head_data,
     output wire nonempty,
-    output reg overflow,
-    output reg [31:0] dropped_count
+    (* dont_touch="true" *) output reg overflow,
+    (* dont_touch="true" *) output reg [31:0] dropped_count
 );
 localparam integer DEPTH = 1 << ADDR_BITS;
 localparam [ADDR_BITS:0] CAPACITY = {1'b1,{ADDR_BITS{1'b0}}};
@@ -859,7 +869,13 @@ reg [ADDR_BITS-1:0] write_pointer,read_pointer;
 reg [ADDR_BITS:0] fifo_count;
 reg fetch_pending;
 reg [85:0] ram_output;
-wire full = (fifo_count==CAPACITY);
+// Reachable occupancy is 0..DEPTH, so the high bit is the full flag.
+wire full = fifo_count[ADDR_BITS];
+(* keep="true" *) wire [ADDR_BITS:0] count_increment=fifo_count+1'b1;
+(* keep="true" *) wire [ADDR_BITS:0] count_decrement=fifo_count-1'b1;
+(* keep="true" *) wire [ADDR_BITS-1:0] write_increment=write_pointer+1'b1;
+(* keep="true" *) wire [ADDR_BITS-1:0] read_increment=read_pointer+1'b1;
+(* keep="true" *) wire [31:0] dropped_increment=dropped_count+32'd1;
 assign nonempty = (fifo_count!=0);
 wire pop_ok = pop && head_valid;
 wire push_ok = push && (!full || pop_ok);
@@ -880,18 +896,18 @@ always @(posedge clk or negedge rst_n) begin
         write_pointer<=0;read_pointer<=0;fifo_count<=0;
         head_valid<=0;fetch_pending<=0;overflow<=0;dropped_count<=0;
     end else begin
-        if(push_ok) write_pointer<=write_pointer+1'b1;
-        if(pop_ok) begin read_pointer<=read_pointer+1'b1;head_valid<=0;end
+        if(push_ok) write_pointer<=write_increment;
+        if(pop_ok) begin read_pointer<=read_increment;head_valid<=0;end
         case({push_ok,pop_ok})
-            2'b10:fifo_count<=fifo_count+1'b1;
-            2'b01:fifo_count<=fifo_count-1'b1;
+            2'b10:fifo_count<=count_increment;
+            2'b01:fifo_count<=count_decrement;
             default:;
         endcase
         if(fetch) fetch_pending<=1;
         if(fetch_pending) begin
             head_data<=ram_output;head_valid<=1;fetch_pending<=0;
         end
-        if(push && !push_ok) begin overflow<=1;dropped_count<=dropped_count+32'd1;end
+        if(push && !push_ok) begin overflow<=1;dropped_count<=dropped_increment;end
     end
 end
 endmodule

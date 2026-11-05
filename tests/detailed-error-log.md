@@ -55,12 +55,11 @@ FIFO 模块放在现有 spi.v 内，不需要额外添加 XPR 源文件。
 本轮 MRAM 读阶段结束后，先排空全部已缓存明细，再发汇总；
 汇总完整读取后才进入下一轮。因此轮内保持连续时序，轮间仍可能等待 SPI/USB。
 
-ILA 新增：probe32=`detail_fifo_overflow`（本轮曾经丢弃明细），
-probe33=`detail_dropped_count[31:0]`（本轮丢弃条数）。它们在新配置、新测试或本轮汇总 ACK 时清零。
+溢出标志 `detail_fifo_overflow` 与本轮丢弃计数 `detail_dropped_count` 仍保留在 RTL 中，
+在新配置、新测试或本轮汇总 ACK 时清零。本版按用户要求去掉 ILA，不再提供 probe32/33。
 主机不增加新字段：对每轮完整、有效的 25 字节明细按 `(loop_idx,err_idx)` 去重，
 用汇总总错误数减去明细条数计算未收到的明细数；不要把原始 chunk 或重读重复帧重复计数。
-无链路/解析丢失时该差值等于 FIFO 丢弃数，ILA 可用于区分缓存溢出和通信丢帧。
-要观察本轮最终的硬件丢弃计数，应在汇总被读完清零之前抓取 ILA。
+无链路/解析丢失时，该差值等于 FIFO 丢弃数；差值本身不能排除通信丢帧。
 
 保持原有 SPI 模式 0、每次 CS 最多一帧的约定；上位机可继续每次读取 64 字节。
 有效帧结束后填零；没有就绪帧时整次轮询返回零。不要因为读到一条明细就认为本轮结束。
@@ -89,7 +88,7 @@ git log -1 --oneline
 
 用 Vivado 2018.3 打开原 XPR，Reset `synth_2`，重新运行综合和 `impl_2`，
 继续使用此前的 `Performance_ExplorePostRoutePhysOpt` 策略。
-新增的 BRAM FIFO、溢出诊断及 ILA 可能影响资源和布局时序；原主线通过的时序结果不能替代本次验证。
+BRAM FIFO、输出流水和控制事件缓存可能影响资源及布局时序；原主线通过的时序结果不能替代本次验证。
 实现结束后，在 Tcl Console 中执行：
 
 ```tcl
@@ -100,10 +99,10 @@ source [file join [get_property DIRECTORY [current_project]] .. .. tests collect
 
 脚本输出可上传的 `timing_bundle_*.rpt` 路径，新增 FIFO 队头、占用计数和 RAMB 类型/数量，
 并附带资源利用率，辅助核对 FIFO 是否实际使用块 RAM、是否满足器件容量。
-确认新实现的 setup/hold 后生成并烧录本次 bitstream，保留同次 `.ltx`。
+确认新实现的 setup/hold 后生成并烧录本次 bitstream，本版无 ILA，应清空 Hardware Manager 中旧 ltx 的探针文件配置。
 上板分别测试详细日志开/关、无错误/有错误、多循环以及中断读取后重试；
 未溢出时核对明细序号连续、数量等于汇总错误数；
-溢出时核对跳号及“总数−已收明细数”与 ILA 丢弃数一致，循环只在汇总后推进。
+溢出时检查跳号，并用“总数−已收明细数”核对未收到的明细数量；循环只在汇总后推进。
 没有自然错误时只能验证无错误路径；故障注入应使用可控的测试环境。
 
 ## 仿真

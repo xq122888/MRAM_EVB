@@ -1,8 +1,9 @@
 # SPI report regression
 
 Current detailed errors use a 4096-entry BRAM FIFO: logging never stalls an
-active MRAM access, including on overflow. Total errors remain complete; ILA
-probes 32/33 expose overflow and dropped-record count. See
+active MRAM access, including on overflow. Total errors remain complete. ILA
+and debug_hub have now been removed at the user's request; host loss accounting
+uses the total minus the number of valid unique details. See
 [detailed-error-log.md](detailed-error-log.md) for the unchanged wire format,
 queue/round boundaries, and host-side loss reconciliation.
 
@@ -16,7 +17,7 @@ bench/count below describe earlier commits, not current validation requirements.
 The TRNG-seeded random-data repair and its digital replay regression are documented
 in [random-pattern.md](random-pattern.md). Run `bash tests/run_random_pattern.sh`
 and `bash tests/run_trng_seed.sh` for seed handling, conditioning and health checks.
-Check the XDC command subset and debug-core construction order with
+Check the XDC command subset and absence of debug-core insertion with
 `tclsh tests/check_xdc.tcl`; this is a smoke test, not a Vivado run.
 
 The 25-byte detailed-error reporting feature and its build/board checks are
