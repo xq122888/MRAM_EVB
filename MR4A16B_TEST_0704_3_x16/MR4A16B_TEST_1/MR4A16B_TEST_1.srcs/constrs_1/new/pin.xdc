@@ -116,14 +116,6 @@ set_property PULLDOWN true [get_ports {DQ[2]}]
 set_property PULLDOWN true [get_ports {DQ[1]}]
 set_property PULLDOWN true [get_ports {DQ[0]}]
 
-# ============================================
-# CMOS开关
-# ============================================
-set_property PACKAGE_PIN G17 [get_ports CMOS_SW]
-set_property IOSTANDARD LVCMOS33 [get_ports CMOS_SW]
-set_property SLEW FAST [get_ports CMOS_SW]
-set_property DRIVE 16 [get_ports CMOS_SW]
-
 # SPI接口
 set_property PACKAGE_PIN N13 [get_ports spi_miso]
 set_property PACKAGE_PIN N14 [get_ports spi_mosi]

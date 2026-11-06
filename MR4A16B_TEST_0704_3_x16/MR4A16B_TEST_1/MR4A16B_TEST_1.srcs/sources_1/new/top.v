@@ -5,7 +5,6 @@ module top(
     input rst_n,
     input clkp,
     input clkn, 
-    output CMOS_SW,
     
     input  spi_sclk,
     input  spi_cs_n,
@@ -133,7 +132,6 @@ wire [15:0] spi_t_lbh2lbl_r;
 wire [15:0] spi_t_lbl2lbh_r;
 
 wire        rstn            ;
-wire        cmos_sw     ;
 reg [3:0]   TMODE_D1    ;
 reg [3:0]   TMODE_D2    ;
 (* IOB="true", dont_touch="true" *) reg R_EN;
@@ -1187,7 +1185,6 @@ generate
 endgenerate
 assign RD_DATA = DQ;
 
-assign CMOS_SW = cmos_sw;
 
 assign t_AVQV    = t_AVQV_r   ;
 assign t_AV2DV   = t_AV2DV_w  ;

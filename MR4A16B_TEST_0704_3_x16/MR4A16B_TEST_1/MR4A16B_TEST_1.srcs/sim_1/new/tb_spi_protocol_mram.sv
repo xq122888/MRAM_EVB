@@ -97,7 +97,6 @@ top u_top (
     .rst_n(rst_n),
     .clkp(clk),
     .clkn(~clk),
-    .CMOS_SW(),
     .spi_sclk(spi_sclk),
     .spi_cs_n(spi_cs_n),
     .spi_mosi(spi_mosi),
