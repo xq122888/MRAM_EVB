@@ -966,21 +966,23 @@ always @(posedge clk or negedge rstn) begin
         case(vio_din_sel)
             8'd1:   dout <= 16'h0;
             8'd2:   dout <= 16'hFFFF;
-            8'd3:   dout <= 16'h5A5A;
-            8'd4:   dout <= 16'hA5A5;
+            8'd3:   dout <= 16'h5555;
+            8'd4:   dout <= 16'hAAAA;
             8'd5:   dout <= 16'h0;
             8'd6:   dout <= 16'hFFFF;
-            8'd7:   dout <= 16'h5555;
-            8'd8:   dout <= 16'hAAAA;
+            8'd7:   dout <= 16'h0;
+            8'd8:   dout <= 16'hFFFF;
             8'd9:   dout <= random_read_restart ? random_seed_word : random_begin_word;
             default:dout <= 16'h0;
         endcase 
     else if(hold_before_one)
         case(vio_din_sel)
-            8'd1:   dout <= addr_cnt[15:0];
-            8'd2:   dout <= 16'hFFFF-addr_cnt[15:0];
             8'd3:   dout <= ~dout;
             8'd4:   dout <= ~dout;
+            8'd5:   dout <= ~dout;
+            8'd6:   dout <= ~dout;
+            8'd7:   dout <= addr_cnt[15:0];
+            8'd8:   dout <= 16'hFFFF-addr_cnt[15:0];
             8'd9:   dout <= random_next_word; // one step per address update
             default:dout <= dout;
         endcase

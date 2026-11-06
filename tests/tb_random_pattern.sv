@@ -7,7 +7,7 @@ module tb_random_pattern;
   wire [21:0] address;
   wire [15:0] dq;
   wire en,wn,ubn,lbn;
-  localparam MAX_WORDS=32768, LEGACY_CASES=10, BOUNDARY_CASES=48, PATTERN_CASES=16, REPRO_CASES=6;
+  localparam MAX_WORDS=32768, LEGACY_CASES=10, BOUNDARY_CASES=48, PATTERN_CASES=112, REPRO_CASES=6;
   localparam CASES=LEGACY_CASES+BOUNDARY_CASES+PATTERN_CASES+REPRO_CASES;
   reg [15:0] memory[0:MAX_WORDS-1],read_value=0;
   reg [31:0] vectors[0:MAX_WORDS-1];
@@ -36,14 +36,14 @@ module tb_random_pattern;
     reg [31:0] value;
     begin
       case(pattern_cfg)
-        1: value=offset;
-        2: value=16'hffff-offset;
-        3: value=offset%2?16'ha5a5:16'h5a5a;
-        4: value=offset%2?16'h5a5a:16'ha5a5;
-        5: value=0;
-        6: value=16'hffff;
-        7: value=16'h5555;
-        8: value=16'haaaa;
+        1: value=0;
+        2: value=16'hffff;
+        3: value=offset%2?16'haaaa:16'h5555;
+        4: value=offset%2?16'h5555:16'haaaa;
+        5: value=offset%2?16'hffff:16'h0000;
+        6: value=offset%2?16'h0000:16'hffff;
+        7: value=offset;
+        8: value=16'hffff-offset;
         default: value=vectors[round_no+offset+seed_base];
       endcase
       golden=(chip_cfg==8'h80)?{value[7:0],value[7:0]}:value[15:0];
@@ -152,8 +152,18 @@ module tb_random_pattern;
         period_cfg=7;
       end else if(case_no<LEGACY_CASES+BOUNDARY_CASES+PATTERN_CASES && case_no>=LEGACY_CASES+BOUNDARY_CASES) begin
         boundary_no=case_no-LEGACY_CASES-BOUNDARY_CASES;
-        pattern_cfg=1+boundary_no/2;read_cfg=boundary_no%2;
-        length_cfg=read_cfg?1025:577;period_cfg=7;
+        period_cfg=7;
+        if(boundary_no<16) begin
+          pattern_cfg=1+boundary_no/2;read_cfg=boundary_no%2;
+          length_cfg=read_cfg?1025:577;
+        end else begin
+          // Every fixed pattern: all 3 write x 2 read modes, lengths 1/5,
+          // two loops and an odd nonzero base (phase is relative to base).
+          boundary_no=boundary_no-16;
+          pattern_cfg=1+boundary_no/12;
+          write_cfg=(boundary_no/4)%3;read_cfg=(boundary_no/2)%2;
+          length_cfg=(boundary_no%2)?5:1;base_addr=22'h12001;
+        end
       end
       if(case_no>=LEGACY_CASES+BOUNDARY_CASES+PATTERN_CASES) begin
         // User's 2026-11-05 capture: base 0, length 0x250, one round,

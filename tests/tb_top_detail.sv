@@ -115,7 +115,7 @@ module tb_top_detail;
     integer i;
     begin
       for(i=0;i<24;i=i+1) cfg[i]=0;
-      cfg[0]=8'h55;cfg[1]=8'h83;cfg[2]=2;cfg[3]=5;
+      cfg[0]=8'h55;cfg[1]=8'h83;cfg[2]=2;cfg[3]=1;
       cfg[4]=configured_start[7:0];cfg[5]=configured_start[15:8];
       cfg[6]={2'b0,configured_start[21:16]};
       cfg[8]=length_cfg;cfg[12]=2;cfg[16]=period_cfg;cfg[17]=1;cfg[18]=read_cfg;cfg[19]=enable_detail;

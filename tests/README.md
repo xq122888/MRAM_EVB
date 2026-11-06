@@ -1,3 +1,9 @@
+# Current data patterns
+
+The nine pattern IDs now follow [data-patterns-nine.md](data-patterns-nine.md),
+based on 31100b0 with Read1 capture at 40 ns. Pattern 1/2 each use one fixed
+background; each write/read loop retains one write pass and one read pass.
+
 # SPI report regression
 
 Current detailed errors use a 4096-entry BRAM FIFO: logging never stalls an

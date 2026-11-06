@@ -1,8 +1,9 @@
 # TRNG 种子与可重放随机数据
 
-分支：`fix/random-data-pattern`。基于已通过时序的详细日志源码 be92d26 及文档提交
-6091834。本分支改变了 RTL、TRNG 和时序约束，必须重新综合、实现及上板验证；
-be92d26 的时序结果不代表本次实现。仓库中继承的 bitstream 不包含本次修复。
+当前分支：`fix/data-patterns-nine`，基于 `31100b0`。本次沿用基线的 TRNG/PRNG 实现，
+仅调整数据类型定义，见 [data-patterns-nine.md](data-patterns-nine.md)。
+修改后必须重新综合、实现及上板验证；历史时序报告不能代表新实现。
+仓库中继承的 bitstream 不包含本次数据类型修改。
 
 ## 原问题与当前行为
 
@@ -26,7 +27,7 @@ x16 从 xorshift32 状态取低 16 位，两个字节不再被强制设为相同
 内部总线沿用字节复制方式。错误明细进入独立 FIFO，PRNG 与写读流水线连续运行；
 等待新 TRNG 种子仍保持启动前等待。
 随机模式的单地址写读测试也避免了读结束后额外写零的原控制边界问题。
-其他数据模式保留原有控制行为。
+其他数据模式沿用原有控制流程，编号与数据定义见 [data-patterns-nine.md](data-patterns-nine.md)。
 
 若新种子尚未就绪，SPI 启动请求会等待，MRAM 不开始新的写入；等待替代测试时停止旧引擎。
 新有效配置可替代等待请求，停止命令可取消等待，错误校验帧不会替换有效等待配置。
@@ -98,7 +99,7 @@ SPI 专项检查未就绪等待、一次性启动、坏校验配置保留、有�
 完整控制器测试使用明确标注的确定性种子夹具，从 A/DQ 和 CE/WE/字节使能引脚
 捕获实际写入值，与独立 Python 向量比对，再由独立存储数组验证读期望值。
 在原有 10 个用例上增加长度边界、固定数据模式及用户 592 字/50 ns 配置，
-共 80 个用例，覆盖三种写模式、两种读模式、全部数据模式，以及
+共 176 个用例，覆盖三种写模式、两种读模式、全部数据模式，以及
 `0x200/0x240/0x400/0x4000` 附近长度；每轮检查地址顺序、完整采样和报告。
 保留 x8/x16、多轮、同模式重启、故障明细与汇总、错误时不暂停访问，
 以及有旧明细待发送时等待新种子并替换测试的验证。
@@ -118,9 +119,9 @@ SPI 专项检查未就绪等待、一次性启动、坏校验配置保留、有�
 关闭占用工程的 Vivado 和上位机，在已有本机仓库执行：
 
 ```sh
-git remote set-branches --add origin fix/random-data-pattern
+git remote set-branches --add origin fix/data-patterns-nine
 git fetch origin
-git switch fix/random-data-pattern
+git switch fix/data-patterns-nine
 git log -1 --oneline
 ```
 
