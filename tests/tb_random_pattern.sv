@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 // Digital replay test. Writes are captured from actual A/DQ/control pins. During
-// the read pass an ideal bus supplies stored words with 35 ns address latency (5 ns before Read1 capture).
+// the read pass an ideal bus supplies stored words with 35 ns address latency (10 ns before either read capture).
 // CE/OE analogue behaviour and physical MRAM timing are not modelled.
 module tb_random_pattern;
   reg clk=0,rst_n=0,sclk=0,cs_n=1,mosi=0,active=0;

@@ -205,8 +205,8 @@ reg flg_next;
 reg         rd_en           ;
 reg         rd_en_d         ;
 reg         rd_en_d2        ;
-// At most two reads overlap: period >=7 clocks, capture 8/9 after the pad
-// starts (9/10 after the command, including the output register pipeline).
+// At most two reads overlap: period >=7 clocks, capture 9 after the pad
+// starts (10 after the command, including the output register pipeline).
 // Payloads remain paired with their launch address even after A has advanced.
 reg [1:0] read_valid;
 reg [3:0] read_delay_0, read_delay_1;
@@ -839,6 +839,9 @@ always @(posedge clk or negedge rstn) begin
     end else if(!detail_stall) begin rd_en_d<=rd_en;rd_en_d2<=rd_en_d;end
 end
 wire io_read_next = detail_stall ? rd_en_d2 : rd_en_d;
+// Read1 remains enabled through the extended final-address capture tail.
+// A zero timer after period wrap must not act as a Read1 release edge.
+wire continuous_read_next = io_read_next && (spi_read_mode != 2'b01);
 always @(posedge clk or negedge rstn) begin
     if(!rstn) flg<=0;
     else flg<=flg_next;
@@ -1000,7 +1003,7 @@ always @* begin
     else if(!detail_stall) begin
         if(io_cycle_start) en_pad_next=(vio_t_EH2EL!=16'd0);
         else if(vio_t_EH2EL!=16'd0 && hold_sample_count==vio_t_EH2EL) en_pad_next=1'b0;
-        else if(en_release_match) en_pad_next=1'b1;
+        else if(en_release_match && !continuous_read_next) en_pad_next=1'b1;
     end
 end
 always @(posedge clk or negedge rstn) begin
@@ -1032,7 +1035,7 @@ always @* begin
     else if(!detail_stall) begin
         if(io_cycle_start) gn_pad_next=!rd_en_d || (vio_t_GH2GL!=16'd0);
         else if(vio_t_GH2GL!=16'd0 && hold_sample_count==vio_t_GH2GL) gn_pad_next=1'b0;
-        else if(gn_release_match) gn_pad_next=1'b1;
+        else if(gn_release_match && !continuous_read_next) gn_pad_next=1'b1;
     end
 end
 always @(posedge clk or negedge rstn) begin
@@ -1048,7 +1051,7 @@ always @* begin
     else if(!detail_stall) begin
         if(io_cycle_start) ubn_pad_next=(vio_t_UBH2UBL!=16'd0);
         else if(vio_t_UBH2UBL!=16'd0 && hold_sample_count==vio_t_UBH2UBL) ubn_pad_next=1'b0;
-        else if(ub_release_match) ubn_pad_next=1'b1;
+        else if(ub_release_match && !continuous_read_next) ubn_pad_next=1'b1;
     end
 end
 always @(posedge clk or negedge rstn) begin
@@ -1064,7 +1067,7 @@ always @* begin
     else if(!detail_stall) begin
         if(io_cycle_start) lbn_pad_next=(vio_t_LBH2LBL!=16'd0);
         else if(vio_t_LBH2LBL!=16'd0 && hold_sample_count==vio_t_LBH2LBL) lbn_pad_next=1'b0;
-        else if(lb_release_match) lbn_pad_next=1'b1;
+        else if(lb_release_match && !continuous_read_next) lbn_pad_next=1'b1;
     end
 end
 always @(posedge clk or negedge rstn) begin

@@ -74,7 +74,7 @@ module tb_mram_pins;
         if(!previous_flg) begin tick=0;started=started+1;end
         else tick=tick+1;
         read_period=(read_cfg==1 && period_cfg<8)?8:period_cfg;
-        tail_cycles=((read_cfg==1)?9:8)-read_period;
+        tail_cycles=9-read_period;
         if(tail_cycles<0)tail_cycles=0;
         write_cycles=(mode_cfg==1)?0:length_cfg*period_cfg;
         expected_cycles=write_cycles+((mode_cfg==0)?0:(length_cfg*read_period+tail_cycles));
@@ -113,7 +113,7 @@ module tb_mram_pins;
         if({en,wn,gn,ub,lb}!=={want_en,want_wn,want_gn,want_bn,want_bn})
           $fatal(1,"Pin order case=%0d mode=%0d write=%0d read=%0d period=%0d loop=%0d offset=%0d slot=%0d got CE/WE/OE/UB/LB=%b expected=%b",case_no,mode_cfg,write_cfg,read_cfg,period_cfg,dut.loop_idx,offset,slot,{en,wn,gn,ub,lb},{want_en,want_wn,want_gn,want_bn,want_bn});
         if(read_phase && slot==0) begin
-          sample_due[launched]=clock_no+((read_cfg==1)?9:8);
+          sample_due[launched]=clock_no+9;
           sample_addr[launched]=base_cfg+offset;
           sample_expected[launched]=(offset%2==0)?16'h5a5a:16'ha5a5;
           launched=launched+1;

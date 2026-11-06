@@ -80,7 +80,7 @@ module tb_top_detail;
         engine_tick=prior_flg?engine_tick+1:0;
         read_period=(read_cfg==1 && period_cfg<8)?8:period_cfg;
         write_cycles=length_cfg*period_cfg;
-        tail_cycles=((read_cfg==1)?9:8)-read_period;
+        tail_cycles=9-read_period;
         if(tail_cycles<0)tail_cycles=0;
         total_cycles=write_cycles+length_cfg*read_period+tail_cycles;
         is_read=engine_tick>=write_cycles;

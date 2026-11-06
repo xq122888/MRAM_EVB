@@ -394,7 +394,8 @@ end
 wire [15:0] commit_write_period = (write_mode_reg == 2'b11) ? 16'd10 : t_avav_reg;
 // Read2 has a 40 ns minimum; write timing retains the requested period.
 wire [15:0] commit_read_period = (read_mode_reg==2'b01 && t_avav_reg<16'd8) ? 16'd8 : t_avav_reg;
-wire [15:0] commit_read_sample = (read_mode_reg==2'b01) ? 16'd9 : 16'd8;
+// Both read modes capture DQ 45 ns after the physical address starts.
+wire [15:0] commit_read_sample = 16'd9;
 // Exact post-mode offsets, including the 16-bit x8 period+1 wrap.
 // These decode once per configuration, outside the running MRAM control paths.
 wire [15:0] commit_en_offset_w = (write_mode_reg == 2'b00 || write_mode_reg == 2'b11) ? 16'd3 : 16'd2;
@@ -431,8 +432,8 @@ always @(posedge clk or negedge rst_n) begin
         period_before_last_r <= 16'd8;
         gn_release_w <= 21'd10;
         gn_release_r <= 21'd0;
-        compare_early_w <= 21'h1ffffe;
-        compare_early_r <= 21'h1ffffe;
+        compare_early_w <= 21'h1fffff;
+        compare_early_r <= 21'h1fffff;
         en_release_w <= 21'd7;
         en_release_r <= 21'd0;
         wn_release_w <= 21'd8;
@@ -461,7 +462,7 @@ always @(posedge clk or negedge rst_n) begin
 		t_lbh2lbl_w <= 0; t_lbl2lbh_w <= 2;
         // ¶ÁÊ±ĞòÄ¬ÈÏ  50ns
         t_avav_r       <= 16'd10;       
-		t_avqv_r       <= 16'd8;
+		t_avqv_r       <= 16'd9;
         t_av2dv_r      <= 0; 
 		t_eh2el_r <= 0; t_el2eh_r <= 10;
         t_wh2wl_r <= 0; t_wl2wh_r <= 10; 
