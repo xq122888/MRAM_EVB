@@ -26,5 +26,6 @@ PY
 "$iverilog_bin" "${compiler_args[@]}" -g2012 -s tb_random_pattern \
   -o "$output_dir/random.vvp" "$repo_dir/tests/tb_top_timing.sv" \
   "$repo_dir/tests/tb_random_pattern.sv" "$src/top.v" "$src/spi.v" "$src/SPI_Slave.v"
-timeout 600 "$vvp_bin" "$output_dir/random.vvp" +vectors="$output_dir/vectors.hex" \
+# Full 65537-word rolling cases execute three complete write/read rounds.
+timeout "${MRAM_TEST_TIMEOUT_SECONDS:-1200}" "$vvp_bin" "$output_dir/random.vvp" +vectors="$output_dir/vectors.hex" \
   +fixture_seed="$fixture_seed" "$@"

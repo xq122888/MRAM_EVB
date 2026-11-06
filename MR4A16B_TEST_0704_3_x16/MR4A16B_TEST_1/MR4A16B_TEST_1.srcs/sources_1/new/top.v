@@ -955,6 +955,10 @@ always @(posedge clk or negedge rstn) begin
 end
 
 //---
+// Loop index is already advanced before next_loop_start_d1 is consumed.
+// A new command can arrive after a nonzero loop; choose zero on its start
+// edge because loop_idx resets on that same edge. Reads reuse the loop base.
+wire [15:0] rolling_start_word = random_new_test ? 16'd0 : loop_idx[15:0];
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         dout <= 16'h0;
@@ -968,8 +972,8 @@ always @(posedge clk or negedge rstn) begin
             8'd4:   dout <= 16'hAAAA;
             8'd5:   dout <= 16'h0;
             8'd6:   dout <= 16'hFFFF;
-            8'd7:   dout <= 16'h0;
-            8'd8:   dout <= 16'hFFFF;
+            8'd7:   dout <= rolling_start_word;
+            8'd8:   dout <= ~rolling_start_word;
             8'd9:   dout <= random_read_restart ? random_seed_word : random_begin_word;
             default:dout <= 16'h0;
         endcase 
@@ -979,8 +983,8 @@ always @(posedge clk or negedge rstn) begin
             8'd4:   dout <= ~dout;
             8'd5:   dout <= ~dout;
             8'd6:   dout <= ~dout;
-            8'd7:   dout <= addr_cnt[15:0];
-            8'd8:   dout <= 16'hFFFF-addr_cnt[15:0];
+            8'd7:   dout <= dout + 16'd1;
+            8'd8:   dout <= dout - 16'd1;
             8'd9:   dout <= random_next_word; // one step per address update
             default:dout <= dout;
         endcase

@@ -3,6 +3,8 @@
 The nine pattern IDs now follow [data-patterns-nine.md](data-patterns-nine.md),
 based on 31100b0 with Read1 capture at 40 ns. Pattern 1/2 each use one fixed
 background; each write/read loop retains one write pass and one read pass.
+Patterns 7/8 roll the starting value by +1/-1 each round and replay the same
+round during reads; new commands restart at 0000/FFFF.
 
 # SPI report regression
 
