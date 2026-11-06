@@ -41,55 +41,55 @@ assign clk = clk200m;
 //-----------------------------------------------------------------
 // 配置数据
 wire [ 7:0] chip_type      ;
-wire [ 7:0] vio_din_sel     ;
-wire [ 3:0] vio_TMODE       ;
-wire [19:0] vio_addr_ini    ;
-wire [20:0] vio_addr_num    ;
-wire [15:0] vio_t_AVAV      ;
-wire [15:0] vio_t_AVQV      ;
-wire [15:0] vio_t_AV2DV     ;
-wire [15:0] vio_t_EH2EL     ;
-wire [15:0] vio_t_EL2EH     ;
-wire [15:0] vio_t_WH2WL     ;
-wire [15:0] vio_t_WL2WH     ;
-wire [15:0] vio_t_GH2GL     ;
-wire [15:0] vio_t_GL2GH     ;
-wire [15:0] vio_t_UBH2UBL   ;
-wire [15:0] vio_t_UBL2UBH   ;
-wire [15:0] vio_t_LBH2LBL   ;
-wire [15:0] vio_t_LBL2LBH   ;
+wire [ 7:0] din_sel     ;
+wire [ 3:0] TMODE       ;
+wire [19:0] addr_ini    ;
+wire [20:0] addr_num    ;
+wire [15:0] t_AVAV      ;
+wire [15:0] t_AVQV      ;
+wire [15:0] t_AV2DV     ;
+wire [15:0] t_EH2EL     ;
+wire [15:0] t_EL2EH     ;
+wire [15:0] t_WH2WL     ;
+wire [15:0] t_WL2WH     ;
+wire [15:0] t_GH2GL     ;
+wire [15:0] t_GL2GH     ;
+wire [15:0] t_UBH2UBL   ;
+wire [15:0] t_UBL2UBH   ;
+wire [15:0] t_LBH2LBL   ;
+wire [15:0] t_LBL2LBH   ;
 
-wire [19:0] vio_addr_ini_w  ;
-wire [20:0] vio_addr_num_w  ;
-wire [15:0] vio_t_AVAV_w    ;
-wire [15:0] vio_t_AVQV_w    ;
-wire [15:0] vio_t_AV2DV_w   ;
-wire [15:0] vio_t_EH2EL_w   ;
-wire [15:0] vio_t_EL2EH_w   ;
-wire [15:0] vio_t_WH2WL_w   ;
-wire [15:0] vio_t_WL2WH_w   ;
-wire [15:0] vio_t_GH2GL_w   ;
-wire [15:0] vio_t_GL2GH_w   ;
-wire [15:0] vio_t_UBH2UBL_w ;
-wire [15:0] vio_t_UBL2UBH_w ;
-wire [15:0] vio_t_LBH2LBL_w ;
-wire [15:0] vio_t_LBL2LBH_w ;
+wire [19:0] addr_ini_w  ;
+wire [20:0] addr_num_w  ;
+wire [15:0] t_AVAV_w    ;
+wire [15:0] t_AVQV_w    ;
+wire [15:0] t_AV2DV_w   ;
+wire [15:0] t_EH2EL_w   ;
+wire [15:0] t_EL2EH_w   ;
+wire [15:0] t_WH2WL_w   ;
+wire [15:0] t_WL2WH_w   ;
+wire [15:0] t_GH2GL_w   ;
+wire [15:0] t_GL2GH_w   ;
+wire [15:0] t_UBH2UBL_w ;
+wire [15:0] t_UBL2UBH_w ;
+wire [15:0] t_LBH2LBL_w ;
+wire [15:0] t_LBL2LBH_w ;
 
-wire [19:0] vio_addr_ini_r  ;
-wire [20:0] vio_addr_num_r  ;
-wire [15:0] vio_t_AVAV_r    ;
-wire [15:0] vio_t_AVQV_r    ;
-wire [15:0] vio_t_AV2DV_r   ;
-wire [15:0] vio_t_EH2EL_r   ;
-wire [15:0] vio_t_EL2EH_r   ;
-wire [15:0] vio_t_WH2WL_r   ;
-wire [15:0] vio_t_WL2WH_r   ;
-wire [15:0] vio_t_GH2GL_r   ;
-wire [15:0] vio_t_GL2GH_r   ;
-wire [15:0] vio_t_UBH2UBL_r ;
-wire [15:0] vio_t_UBL2UBH_r ;
-wire [15:0] vio_t_LBH2LBL_r ;
-wire [15:0] vio_t_LBL2LBH_r ;
+wire [19:0] addr_ini_r  ;
+wire [20:0] addr_num_r  ;
+wire [15:0] t_AVAV_r    ;
+wire [15:0] t_AVQV_r    ;
+wire [15:0] t_AV2DV_r   ;
+wire [15:0] t_EH2EL_r   ;
+wire [15:0] t_EL2EH_r   ;
+wire [15:0] t_WH2WL_r   ;
+wire [15:0] t_WL2WH_r   ;
+wire [15:0] t_GH2GL_r   ;
+wire [15:0] t_GL2GH_r   ;
+wire [15:0] t_UBH2UBL_r ;
+wire [15:0] t_UBL2UBH_r ;
+wire [15:0] t_LBH2LBL_r ;
+wire [15:0] t_LBL2LBH_r ;
 
 // spi传递数据
 wire        spi_start_test  ;
@@ -133,9 +133,9 @@ wire [15:0] spi_t_lbh2lbl_r;
 wire [15:0] spi_t_lbl2lbh_r;
 
 wire        rstn            ;
-wire        vio_CMOS_SW     ;
-reg [3:0]   vio_TMODE_D1    ;
-reg [3:0]   vio_TMODE_D2    ;
+wire        cmos_sw     ;
+reg [3:0]   TMODE_D1    ;
+reg [3:0]   TMODE_D2    ;
 (* IOB="true", dont_touch="true" *) reg R_EN;
 (* IOB="true", dont_touch="true" *) reg R_WN;
 (* IOB="true", dont_touch="true" *) reg R_GN;
@@ -322,8 +322,8 @@ wire lb_release_match = rd_en_d2 ? lb_release_r_match : lb_release_w_match;
 wire late_match;
 mram_equal_lut eq_late(.a(hold_sample_count),.b({5'b0,spi_t_avqv_r}),.match(late_match));
 wire current_is_initial, addr_count_equal;
-mram_equal_lut #(.WIDTH(22)) eq_current_initial(.a(pad_cmd_addr),.b({2'b0,vio_addr_ini}),.match(current_is_initial));
-mram_equal_lut #(.WIDTH(23)) eq_count_length(.a(addr_compare_count),.b({2'b0,vio_addr_num}),.match(addr_count_equal));
+mram_equal_lut #(.WIDTH(22)) eq_current_initial(.a(pad_cmd_addr),.b({2'b0,addr_ini}),.match(current_is_initial));
+mram_equal_lut #(.WIDTH(23)) eq_count_length(.a(addr_compare_count),.b({2'b0,addr_num}),.match(addr_count_equal));
 wire actual_equals_reference, actual_equals_current;
 mram_equal_lut #(.WIDTH(16)) eq_actual_reference(.a(dq_read_data),.b(read_expected_0),.match(actual_equals_reference));
 mram_equal_lut #(.WIDTH(16)) eq_actual_current(.a(dq_read_data),.b(read_expected_1),.match(actual_equals_current));
@@ -331,15 +331,15 @@ mram_equal_lut #(.WIDTH(16)) eq_actual_current(.a(dq_read_data),.b(read_expected
 // results in one LUT. Include the two upper counter bits in the high slice
 // so the original unsigned 23-bit-vs-21-bit relation is preserved.
 (* keep = "true" *) wire [2:0] count_less_slice, count_equal_slice;
-mram_less_lut #(.WIDTH(7)) lt_count_slice_0(.a(addr_compare_count[6:0]),.b(vio_addr_num[6:0]),.less(count_less_slice[0]));
-assign count_equal_slice[0] = addr_compare_count[6:0] == vio_addr_num[6:0];
-mram_less_lut #(.WIDTH(7)) lt_count_slice_1(.a(addr_compare_count[13:7]),.b(vio_addr_num[13:7]),.less(count_less_slice[1]));
-assign count_equal_slice[1] = addr_compare_count[13:7] == vio_addr_num[13:7];
-mram_less_lut #(.WIDTH(9)) lt_count_slice_2(.a(addr_compare_count[22:14]),.b({2'b0,vio_addr_num[20:14]}),.less(count_less_slice[2]));
+mram_less_lut #(.WIDTH(7)) lt_count_slice_0(.a(addr_compare_count[6:0]),.b(addr_num[6:0]),.less(count_less_slice[0]));
+assign count_equal_slice[0] = addr_compare_count[6:0] == addr_num[6:0];
+mram_less_lut #(.WIDTH(7)) lt_count_slice_1(.a(addr_compare_count[13:7]),.b(addr_num[13:7]),.less(count_less_slice[1]));
+assign count_equal_slice[1] = addr_compare_count[13:7] == addr_num[13:7];
+mram_less_lut #(.WIDTH(9)) lt_count_slice_2(.a(addr_compare_count[22:14]),.b({2'b0,addr_num[20:14]}),.less(count_less_slice[2]));
 // The reported high-slice equality used a CARRY4 before address selection.
 // A three-group LUT equality keeps that reduction out of the carry chain.
 mram_equal_lut #(.WIDTH(9)) eq_count_high_slice(
-    .a(addr_compare_count[22:14]),.b({2'b0,vio_addr_num[20:14]}),.match(count_equal_slice[2]));
+    .a(addr_compare_count[22:14]),.b({2'b0,addr_num[20:14]}),.match(count_equal_slice[2]));
 wire addr_count_less = count_less_slice[2] ||
                       (count_equal_slice[2] && count_less_slice[1]) ||
                       (count_equal_slice[2] && count_equal_slice[1] && count_less_slice[0]);
@@ -356,7 +356,7 @@ endgenerate
 assign addr_last_group[7] = (addr_compare_count[22:21] == 2'b0);
 (* keep = "true" *) wire addr_last_low = &addr_last_group[3:0];
 (* keep = "true" *) wire addr_last_high = &addr_last_group[7:4];
-wire addr_is_last = (vio_addr_num != 21'd0) && addr_last_low && addr_last_high;
+wire addr_is_last = (addr_num != 21'd0) && addr_last_low && addr_last_high;
 // Zero loop_count retains the original unsigned loop_count - 1 behavior.
 wire loop_has_more = (loop_idx < spi_last_loop_index);
 
@@ -450,40 +450,40 @@ spi_protocol u_spi_protocol (
 
 
 // ============================================================
-// 将 SPI 输出连接到测试逻辑的 vio_ 信号
+// 将 SPI 输出连接到测试逻辑的 信号
 // ============================================================
 assign chip_type  = spi_chip_type;
-assign vio_TMODE = spi_test_mode;
-assign vio_din_sel = spi_data_pattern;
-assign vio_addr_ini = spi_start_addr;
-assign vio_addr_num = spi_test_length;
+assign TMODE = spi_test_mode;
+assign din_sel = spi_data_pattern;
+assign addr_ini = spi_start_addr;
+assign addr_num = spi_test_length;
 assign loop_count = spi_loop_count;
-assign vio_t_AVAV_w = spi_t_avav_w;
-assign vio_t_AVQV_w = spi_t_avqv_w;
-assign vio_t_AV2DV_w = spi_t_av2dv_w;
-assign vio_t_EH2EL_w = spi_t_eh2el_w;
-assign vio_t_EL2EH_w = spi_t_el2eh_w;
-assign vio_t_WH2WL_w = spi_t_wh2wl_w;
-assign vio_t_WL2WH_w = spi_t_wl2wh_w;
-assign vio_t_GH2GL_w = spi_t_gh2gl_w;
-assign vio_t_GL2GH_w = spi_t_gl2gh_w;
-assign vio_t_UBH2UBL_w = spi_t_ubh2ubl_w;
-assign vio_t_UBL2UBH_w = spi_t_ubl2ubh_w;
-assign vio_t_LBH2LBL_w = spi_t_lbh2lbl_w;
-assign vio_t_LBL2LBH_w = spi_t_lbl2lbh_w;
-assign vio_t_AVAV_r = spi_t_avav_r;
-assign vio_t_AVQV_r = spi_t_avqv_r;
-assign vio_t_AV2DV_r = spi_t_av2dv_r;
-assign vio_t_EH2EL_r = spi_t_eh2el_r;
-assign vio_t_EL2EH_r = spi_t_el2eh_r;
-assign vio_t_WH2WL_r = spi_t_wh2wl_r;
-assign vio_t_WL2WH_r = spi_t_wl2wh_r;
-assign vio_t_GH2GL_r = spi_t_gh2gl_r;
-assign vio_t_GL2GH_r = spi_t_gl2gh_r;
-assign vio_t_UBH2UBL_r = spi_t_ubh2ubl_r;
-assign vio_t_UBL2UBH_r = spi_t_ubl2ubh_r;
-assign vio_t_LBH2LBL_r = spi_t_lbh2lbl_r;
-assign vio_t_LBL2LBH_r = spi_t_lbl2lbh_r;
+assign t_AVAV_w = spi_t_avav_w;
+assign t_AVQV_w = spi_t_avqv_w;
+assign t_AV2DV_w = spi_t_av2dv_w;
+assign t_EH2EL_w = spi_t_eh2el_w;
+assign t_EL2EH_w = spi_t_el2eh_w;
+assign t_WH2WL_w = spi_t_wh2wl_w;
+assign t_WL2WH_w = spi_t_wl2wh_w;
+assign t_GH2GL_w = spi_t_gh2gl_w;
+assign t_GL2GH_w = spi_t_gl2gh_w;
+assign t_UBH2UBL_w = spi_t_ubh2ubl_w;
+assign t_UBL2UBH_w = spi_t_ubl2ubh_w;
+assign t_LBH2LBL_w = spi_t_lbh2lbl_w;
+assign t_LBL2LBH_w = spi_t_lbl2lbh_w;
+assign t_AVAV_r = spi_t_avav_r;
+assign t_AVQV_r = spi_t_avqv_r;
+assign t_AV2DV_r = spi_t_av2dv_r;
+assign t_EH2EL_r = spi_t_eh2el_r;
+assign t_EL2EH_r = spi_t_el2eh_r;
+assign t_WH2WL_r = spi_t_wh2wl_r;
+assign t_WL2WH_r = spi_t_wl2wh_r;
+assign t_GH2GL_r = spi_t_gh2gl_r;
+assign t_GL2GH_r = spi_t_gl2gh_r;
+assign t_UBH2UBL_r = spi_t_ubh2ubl_r;
+assign t_UBL2UBH_r = spi_t_ubl2ubh_r;
+assign t_LBH2LBL_r = spi_t_lbh2lbl_r;
+assign t_LBL2LBH_r = spi_t_lbl2lbh_r;
 
 
 
@@ -493,11 +493,11 @@ assign vio_t_LBL2LBH_r = spi_t_lbl2lbh_r;
 // Collect continuously from global reset, including while waiting for a
 // command or a seed. Mode changes must not reset the entropy source.
 mram_trng_seed u_seed_rng(.clk(clk),.rst_n(rst_n),
-    .take(spi_start_test && vio_din_sel==8'd9),.seed_data(trng_seed_data),
+    .take(spi_start_test && din_sel==8'd9),.seed_data(trng_seed_data),
     .seed_ready(trng_seed_ready),.health_fail(trng_seed_fault));
 always @(posedge clk or negedge rst_n) begin
     if(!rst_n) random_test_seed<=32'd1;
-    else if(spi_start_test && vio_din_sel==8'd9) random_test_seed<=trng_seed_data;
+    else if(spi_start_test && din_sel==8'd9) random_test_seed<=trng_seed_data;
 end
 reg [31:0] random_seed;
 reg [31:0] random_state;
@@ -515,7 +515,7 @@ endfunction
 // The controller emits its loop-start pulse on a restart from a nonzero
 // loop index too. Cover both start edges so this is not a seed advance.
 wire random_new_test = (start_d1 != start_d2);
-wire random_read_restart = (vio_TMODE==4'd2) && rd_en && !rd_en_d;
+wire random_read_restart = (TMODE==4'd2) && rd_en && !rd_en_d;
 wire [31:0] random_begin_seed = random_new_test ? random_test_seed : random_seed_next;
 wire random_x8 = (chip_type==8'h80) || (chip_type==8'h82);
 wire [15:0] random_begin_word = random_x8 ? {random_begin_seed[7:0],random_begin_seed[7:0]} : random_begin_seed[15:0];
@@ -544,8 +544,8 @@ always @(posedge clk or negedge rst_n) begin
 
 
         
-        vio_TMODE_D1<= 4'd0     ;
-        vio_TMODE_D2<= 4'd0     ;
+        TMODE_D1<= 4'd0     ;
+        TMODE_D2<= 4'd0     ;
         
         loop_finish_d1 <= 1'b0  ;
         
@@ -571,8 +571,8 @@ always @(posedge clk or negedge rst_n) begin
         
         end
 
-        vio_TMODE_D1<= vio_TMODE;
-        vio_TMODE_D2<= vio_TMODE_D1;
+        TMODE_D1<= TMODE;
+        TMODE_D2<= TMODE_D1;
         
         loop_finish_d1 <= loop_finish;
 
@@ -612,15 +612,15 @@ always @(posedge clk or negedge rstn) begin
 
         // ---------- 2. 检测循环结束条件（与原逻辑完全一致） ----------
         if (!detail_stall && flg && addr_is_last &&
-            (hold_before_one || (vio_addr_num==21'd1 && hold_before_two))) begin
+            (hold_before_one || (addr_num==21'd1 && hold_before_two))) begin
             // Length one has no penultimate address to notify completion. Arm
             // the pending read at the write->read phase change, so keep drops
             // before the sole read ends instead of starting an extra write.
-            if (vio_TMODE == 4'd2 && (rd_en_d ||
-                (vio_addr_num==21'd1 && rd_en))) begin
+            if (TMODE == 4'd2 && (rd_en_d ||
+                (addr_num==21'd1 && rd_en))) begin
                 if (!loop_finish) loop_finish <= 1'b1;
             end
-            else if (vio_TMODE != 4'd2) begin
+            else if (TMODE != 4'd2) begin
                 if (!loop_finish) loop_finish <= 1'b1;
             end
         end
@@ -647,7 +647,7 @@ end
 // One-hot source masks put address retention on the data input instead of
 // extracting a slow range-comparison-dependent CE. KEEP bounds each bit's final
 // choice to three parallel AND terms and an OR (six LUT inputs).
-(* keep="true" *) wire [21:0] address_sum = vio_addr_ini + addr_cnt;
+(* keep="true" *) wire [21:0] address_sum = addr_ini + addr_cnt;
 (* keep="true" *) reg [2:0] address_source_mask;
 always @* begin
     if (detail_stall)
@@ -663,7 +663,7 @@ always @(posedge clk or negedge rstn) begin
     if (!rstn)
         addr <= 22'd0;
     else
-        addr <= ({22{address_source_mask[0]}} & {2'b0,vio_addr_ini}) |
+        addr <= ({22{address_source_mask[0]}} & {2'b0,addr_ini}) |
                 ({22{address_source_mask[1]}} & address_sum) |
                 ({22{address_source_mask[2]}} & addr);
 end
@@ -675,7 +675,7 @@ wire count_restart = (start_d1 != start_d2) || next_loop_start_d1;
 // A single address wraps only at the write->read turnaround. Pure write/read
 // and the final read must advance to length, so the engine stops after one cycle.
 wire count_wrap_raw = keep && addr_is_last &&
-    ((vio_addr_num!=21'd1) || (vio_TMODE==4'd2 && !rd_en_d));
+    ((addr_num!=21'd1) || (TMODE==4'd2 && !rd_en_d));
 (* keep="true" *) reg count_wrap_cached,count_less_cached;
 always @(posedge clk or negedge rstn) begin
     if(!rstn) begin count_wrap_cached<=0;count_less_cached<=0;end
@@ -835,7 +835,7 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn) begin rd_en_d<=0;rd_en_d2<=0;end
     else if(spi_start_test || random_seed_wait) begin
-        rd_en_d<=(vio_TMODE==4'd1);rd_en_d2<=(vio_TMODE==4'd1);
+        rd_en_d<=(TMODE==4'd1);rd_en_d2<=(TMODE==4'd1);
     end else if(!detail_stall) begin rd_en_d<=rd_en;rd_en_d2<=rd_en_d;end
 end
 wire io_read_next = detail_stall ? rd_en_d2 : rd_en_d;
@@ -945,7 +945,7 @@ always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         random_seed <= 32'd1;
         random_state <= 32'd1;
-    end else if (!detail_stall && vio_din_sel==8'd9) begin
+    end else if (!detail_stall && din_sel==8'd9) begin
         if (random_new_test || next_loop_start_d1) begin
             random_seed <= random_begin_seed;
             random_state <= random_begin_seed;
@@ -963,7 +963,7 @@ always @(posedge clk or negedge rstn) begin
     else if(detail_stall)
         dout <= dout;
     else if((start_d1!=0 && start_d1!=start_d2) || next_loop_start_d1 || random_read_restart)
-        case(vio_din_sel)
+        case(din_sel)
             8'd1:   dout <= 16'h0;
             8'd2:   dout <= 16'hFFFF;
             8'd3:   dout <= 16'h5555;
@@ -976,7 +976,7 @@ always @(posedge clk or negedge rstn) begin
             default:dout <= 16'h0;
         endcase 
     else if(hold_before_one)
-        case(vio_din_sel)
+        case(din_sel)
             8'd3:   dout <= ~dout;
             8'd4:   dout <= ~dout;
             8'd5:   dout <= ~dout;
@@ -1000,8 +1000,8 @@ always @* begin
     en_pad_next=pad_cmd_en;
     if(!flg_next) en_pad_next=1'b1;
     else if(!detail_stall) begin
-        if(io_cycle_start) en_pad_next=(vio_t_EH2EL!=16'd0);
-        else if(vio_t_EH2EL!=16'd0 && hold_sample_count==vio_t_EH2EL) en_pad_next=1'b0;
+        if(io_cycle_start) en_pad_next=(t_EH2EL!=16'd0);
+        else if(t_EH2EL!=16'd0 && hold_sample_count==t_EH2EL) en_pad_next=1'b0;
         else if(en_release_match) en_pad_next=1'b1;
     end
 end
@@ -1016,8 +1016,8 @@ always @* begin
     wn_pad_next=pad_cmd_wn;
     if(!flg_next || io_read_next) wn_pad_next=1'b1;
     else if(!detail_stall) begin
-        if(io_cycle_start) wn_pad_next=rd_en_d || (vio_t_WH2WL!=16'd0);
-        else if(vio_t_WH2WL!=16'd0 && hold_sample_count==vio_t_WH2WL) wn_pad_next=1'b0;
+        if(io_cycle_start) wn_pad_next=rd_en_d || (t_WH2WL!=16'd0);
+        else if(t_WH2WL!=16'd0 && hold_sample_count==t_WH2WL) wn_pad_next=1'b0;
         else if(wn_release_match) wn_pad_next=1'b1;
     end
 end
@@ -1032,8 +1032,8 @@ always @* begin
     gn_pad_next=pad_cmd_gn;
     if(!flg_next || !io_read_next) gn_pad_next=1'b1;
     else if(!detail_stall) begin
-        if(io_cycle_start) gn_pad_next=!rd_en_d || (vio_t_GH2GL!=16'd0);
-        else if(vio_t_GH2GL!=16'd0 && hold_sample_count==vio_t_GH2GL) gn_pad_next=1'b0;
+        if(io_cycle_start) gn_pad_next=!rd_en_d || (t_GH2GL!=16'd0);
+        else if(t_GH2GL!=16'd0 && hold_sample_count==t_GH2GL) gn_pad_next=1'b0;
         else if(gn_release_match) gn_pad_next=1'b1;
     end
 end
@@ -1048,8 +1048,8 @@ always @* begin
     ubn_pad_next=pad_cmd_ubn;
     if(!flg_next) ubn_pad_next=1'b1;
     else if(!detail_stall) begin
-        if(io_cycle_start) ubn_pad_next=(vio_t_UBH2UBL!=16'd0);
-        else if(vio_t_UBH2UBL!=16'd0 && hold_sample_count==vio_t_UBH2UBL) ubn_pad_next=1'b0;
+        if(io_cycle_start) ubn_pad_next=(t_UBH2UBL!=16'd0);
+        else if(t_UBH2UBL!=16'd0 && hold_sample_count==t_UBH2UBL) ubn_pad_next=1'b0;
         else if(ub_release_match) ubn_pad_next=1'b1;
     end
 end
@@ -1064,8 +1064,8 @@ always @* begin
     lbn_pad_next=pad_cmd_lbn;
     if(!flg_next) lbn_pad_next=1'b1;
     else if(!detail_stall) begin
-        if(io_cycle_start) lbn_pad_next=(vio_t_LBH2LBL!=16'd0);
-        else if(vio_t_LBH2LBL!=16'd0 && hold_sample_count==vio_t_LBH2LBL) lbn_pad_next=1'b0;
+        if(io_cycle_start) lbn_pad_next=(t_LBH2LBL!=16'd0);
+        else if(t_LBH2LBL!=16'd0 && hold_sample_count==t_LBH2LBL) lbn_pad_next=1'b0;
         else if(lb_release_match) lbn_pad_next=1'b1;
     end
 end
@@ -1077,8 +1077,8 @@ end
 //---
 // Load write data at the same cycle origin as CE/WE/byte enables, including
 // the first address of every loop. This takes priority over end-period zero.
-wire dq_write_event = (vio_t_AV2DV==16'd0 && io_cycle_start) ||
-    (vio_t_AV2DV!=16'd0 && flg && hold_sample_count==vio_t_AV2DV);
+wire dq_write_event = (t_AV2DV==16'd0 && io_cycle_start) ||
+    (t_AV2DV!=16'd0 && flg && hold_sample_count==t_AV2DV);
 always @* begin
     dq_write_next=pad_cmd_dq_write;
     if(!detail_stall && !rd_en_d) begin
@@ -1128,11 +1128,11 @@ always @(posedge clk or negedge rstn) begin
     if(!rstn)
         rd_en <= 1'b0;
     else if(spi_start_test || random_seed_wait)
-        rd_en <= (vio_TMODE==4'd1);
+        rd_en <= (TMODE==4'd1);
     else if(detail_stall)
         rd_en <= rd_en;
     else begin
-        case(vio_TMODE)
+        case(TMODE)
             4'd0: begin  // 写
                 rd_en <= 1'b0;
             end
@@ -1169,7 +1169,7 @@ end
 
 //----------------------------------------------------------------
 assign start = spi_start_test;// start 信号连接
-assign rstn=rst_n && (!(vio_TMODE_D2!=vio_TMODE_D1));
+assign rstn=rst_n && (!(TMODE_D2!=TMODE_D1));
 //assign rstn = rst_n && locked;
 
 // Last-stage registers connect directly to pads: no post-register mode mux.
@@ -1187,22 +1187,22 @@ generate
 endgenerate
 assign RD_DATA = DQ;
 
-assign CMOS_SW = vio_CMOS_SW;
+assign CMOS_SW = cmos_sw;
 
-assign vio_t_AVQV    = vio_t_AVQV_r   ;
-assign vio_t_AV2DV   = vio_t_AV2DV_w  ;
-assign vio_t_WH2WL   = vio_t_WH2WL_w  ;
-assign vio_t_WL2WH   = vio_t_WL2WH_w  ;
+assign t_AVQV    = t_AVQV_r   ;
+assign t_AV2DV   = t_AV2DV_w  ;
+assign t_WH2WL   = t_WH2WL_w  ;
+assign t_WL2WH   = t_WL2WH_w  ;
 
-assign vio_t_AVAV    = rd_en_d2 ? vio_t_AVAV_r    : vio_t_AVAV_w   ;
-assign vio_t_EH2EL   = rd_en_d  ? vio_t_EH2EL_r   : vio_t_EH2EL_w  ;
-assign vio_t_EL2EH   = rd_en_d2 ? vio_t_EL2EH_r   : vio_t_EL2EH_w  ;
-assign vio_t_GH2GL   = rd_en_d  ? vio_t_GH2GL_r   : vio_t_GH2GL_w  ;
-assign vio_t_GL2GH   = rd_en_d2 ? vio_t_GL2GH_r   : vio_t_GL2GH_w  ;
-assign vio_t_UBH2UBL = rd_en_d  ? vio_t_UBH2UBL_r : vio_t_UBH2UBL_w;
-assign vio_t_UBL2UBH = rd_en_d2 ? vio_t_UBL2UBH_r : vio_t_UBL2UBH_w;
-assign vio_t_LBH2LBL = rd_en_d  ? vio_t_LBH2LBL_r : vio_t_LBH2LBL_w;
-assign vio_t_LBL2LBH = rd_en_d2 ? vio_t_LBL2LBH_r : vio_t_LBL2LBH_w;
+assign t_AVAV    = rd_en_d2 ? t_AVAV_r    : t_AVAV_w   ;
+assign t_EH2EL   = rd_en_d  ? t_EH2EL_r   : t_EH2EL_w  ;
+assign t_EL2EH   = rd_en_d2 ? t_EL2EH_r   : t_EL2EH_w  ;
+assign t_GH2GL   = rd_en_d  ? t_GH2GL_r   : t_GH2GL_w  ;
+assign t_GL2GH   = rd_en_d2 ? t_GL2GH_r   : t_GL2GH_w  ;
+assign t_UBH2UBL = rd_en_d  ? t_UBH2UBL_r : t_UBH2UBL_w;
+assign t_UBL2UBH = rd_en_d2 ? t_UBL2UBH_r : t_UBL2UBH_w;
+assign t_LBH2LBL = rd_en_d  ? t_LBH2LBL_r : t_LBH2LBL_w;
+assign t_LBL2LBH = rd_en_d2 ? t_LBL2LBH_r : t_LBL2LBH_w;
 
 
 endmodule

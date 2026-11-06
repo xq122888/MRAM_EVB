@@ -312,7 +312,7 @@ The next source change targets those remaining comparisons:
   values preserve the same rd_en_d2 bank selection used for BOTH operands in
   the original release expression. GH2GL assertion still uses rd_en_d, unchanged.
   The original
-  expression `addr_hold_cnt == vio_t_AVAV - vio_t_GL2GH` evaluates the subtraction
+  expression `addr_hold_cnt == t_AVAV - t_GL2GH` evaluates the subtraction
   at the 21-bit comparison width. The decoder preserves that exact underflow
   behavior; replacing it with a 16- or 32-bit subtraction would not be equivalent.
 - Terminal-address equality is divided into kept three-bit comparisons and two

@@ -175,10 +175,10 @@ wire [2:0]  tx_bit_cnt            = u_top.u_spi_protocol.tx_bit_cnt;
 wire [7:0]  tx_shift_reg          = u_top.u_spi_protocol.tx_shift_reg;
 wire        miso_out_pre          = u_top.u_spi_protocol.miso_out_pre;
 
-//wire        vio_next_loop_start  = u_top.next_loop_start;
-wire        vio_next_loop_start_d1  = u_top.next_loop_start_d1;
-wire        vio_next_loop_start_d2  = u_top.next_loop_start_d2;
-wire        vio_next_loop_start_d3  = u_top.next_loop_start_d3;
+//wire        next_loop_start  = u_top.next_loop_start;
+wire        next_loop_start_d1  = u_top.next_loop_start_d1;
+wire        next_loop_start_d2  = u_top.next_loop_start_d2;
+wire        next_loop_start_d3  = u_top.next_loop_start_d3;
 //wire        spi_loop_idx_changed  = u_top.loop_idx_changed;
 
 wire [31:0] spi_loop_count = u_top.u_spi_protocol.loop_count; // 注意模块内端口名是loop_count

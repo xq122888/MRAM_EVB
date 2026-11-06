@@ -87,11 +87,11 @@ module tb_top_predicates;
   top dut(.clkp(1'b0),.clkn(1'b1),.rst_n(1'b0),.spi_cs_n(1'b1),
           .spi_sclk(1'b0),.spi_mosi(1'b0));
   initial begin
-    force dut.addr_hold_cnt=hold;force dut.vio_t_AVAV=unit_selected_period;
+    force dut.addr_hold_cnt=hold;force dut.t_AVAV=unit_selected_period;
     force dut.u_spi_protocol.tx_byte_cnt=unit_tx_length;
     force dut.u_spi_protocol.tx_byte_ptr=unit_tx_pointer;
     force dut.hold_release_count=hold;force dut.hold_sample_count=hold;
-    force dut.addr_cnt=count;force dut.vio_addr_num=length;
+    force dut.addr_cnt=count;force dut.addr_num=length;
     force dut.addr_compare_count=count;
     force dut.loop_idx=index;force dut.loop_count=loops;
     force dut.rd_en_d=phase_d;force dut.rd_en_d2=phase_d2;
@@ -133,17 +133,17 @@ module tb_top_predicates;
          slice_less9 !== (count[8:0]<length[8:0]) ||
          dut.loop_idx_inc !== (index+32'd1) ||
          dut.addr_cnt_inc !== ((count+32'd1) & 32'h007fffff) ||
-         dut.gn_release_match !== (hold==(unit_selected_period-dut.vio_t_GL2GH)) ||
+         dut.gn_release_match !== (hold==(unit_selected_period-dut.t_GL2GH)) ||
          dut.hold_before_one !== (hold+1==unit_selected_period) ||
          dut.hold_before_one !== (hold==unit_selected_period-1) ||
          dut.hold_before_two !== (hold+2==unit_selected_period) ||
          dut.period_match !== (hold==unit_selected_period) ||
-         dut.early_match !== (hold==dut.vio_t_AVQV-unit_selected_period) ||
-         dut.late_match !== (hold==dut.vio_t_AVQV) ||
-         dut.en_release_match !== (hold==unit_selected_period-dut.vio_t_EL2EH) ||
-         dut.wn_release_match !== (hold==unit_selected_period-dut.vio_t_WL2WH) ||
-         dut.ub_release_match !== (hold==unit_selected_period-dut.vio_t_UBL2UBH) ||
-         dut.lb_release_match !== (hold==unit_selected_period-dut.vio_t_LBL2LBH) ||
+         dut.early_match !== (hold==dut.t_AVQV-unit_selected_period) ||
+         dut.late_match !== (hold==dut.t_AVQV) ||
+         dut.en_release_match !== (hold==unit_selected_period-dut.t_EL2EH) ||
+         dut.wn_release_match !== (hold==unit_selected_period-dut.t_WL2WH) ||
+         dut.ub_release_match !== (hold==unit_selected_period-dut.t_UBL2UBH) ||
+         dut.lb_release_match !== (hold==unit_selected_period-dut.t_LBL2LBH) ||
          dut.addr_count_less !== (count<length) ||
          dut.addr_count_equal !== (count==length) ||
          dut.addr_is_last !== (count==length-1) ||
@@ -161,7 +161,7 @@ module tb_top_predicates;
       hold=n-1;count=n-1;index=n-1;check;
       hold=n-2;count=n+1;index=n+1;check;
       hold=21'h1fffff;count=23'h7fffff;index=32'hffffffff;check;
-      hold=dut.vio_t_AVQV-period;check;
+      hold=dut.t_AVQV-period;check;
       hold=hold+1;check;
     end
     // Exercise full-width counters and both sides of the loop boundary.
@@ -171,11 +171,11 @@ module tb_top_predicates;
       unit_avqv=$random;unit_en_w=$random;unit_en_r=$random;unit_wn=$random;
       unit_ub_w=$random;unit_ub_r=$random;unit_lb_w=$random;unit_lb_r=$random;
       loops=$random;index=$random;check;
-      hold=dut.vio_t_AVQV-unit_selected_period;check;
-      hold=unit_selected_period-dut.vio_t_EL2EH;check;
-      hold=unit_selected_period-dut.vio_t_WL2WH;check;
-      hold=unit_selected_period-dut.vio_t_UBL2UBH;check;
-      hold=unit_selected_period-dut.vio_t_LBL2LBH;check;
+      hold=dut.t_AVQV-unit_selected_period;check;
+      hold=unit_selected_period-dut.t_EL2EH;check;
+      hold=unit_selected_period-dut.t_WL2WH;check;
+      hold=unit_selected_period-dut.t_UBL2UBH;check;
+      hold=unit_selected_period-dut.t_LBL2LBH;check;
       index=loops-1;check;
       index=loops;check;
       index=loops+1;check;
@@ -184,7 +184,7 @@ module tb_top_predicates;
       period=n;
       for(k=0;k<4;k=k+1) begin
         read_select=k;#1;
-        hold=period-dut.vio_t_GL2GH;check;
+        hold=period-dut.t_GL2GH;check;
         hold=hold+1;check;
       end
     end
@@ -194,9 +194,9 @@ module tb_top_predicates;
       period_r_alt=(n<256)?(65535-n):(n-256);
       for(k=0;k<4;k=k+1) begin
         read_select=k;#1;
-        hold=dut.vio_t_AVQV-unit_selected_period;check;
+        hold=dut.t_AVQV-unit_selected_period;check;
         hold=hold+1;check;
-        hold=unit_selected_period-dut.vio_t_WL2WH;check;
+        hold=unit_selected_period-dut.t_WL2WH;check;
         hold=unit_selected_period-1;check;
         hold=unit_selected_period-2;check;
         hold=(phase_d2?unit_period_w:unit_period_r)-1;check;
