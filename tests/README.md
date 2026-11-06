@@ -1,3 +1,6 @@
+Current routed timing findings and control-event optimization are documented in
+[timing-20261106-162813.md](timing-20261106-162813.md). This candidate requires a new Vivado implementation.
+
 # Current data patterns
 
 The nine pattern IDs now follow [data-patterns-nine.md](data-patterns-nine.md),

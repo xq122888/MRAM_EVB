@@ -38,6 +38,14 @@ module tb_mram_pins;
     expected_pad={dut.pad_cmd_en,dut.pad_cmd_wn,dut.pad_cmd_gn,dut.pad_cmd_ubn,dut.pad_cmd_lbn,dut.pad_cmd_addr,dut.pad_cmd_dq_write};
     if(checking && rst_n && dut.flg && !dut.detail_stall && !dut.read_pipeline_flush) begin
       if(dut.period_event!==dut.period_match) $fatal(1,"Predicted period pulse diverged");
+      if(dut.hold_before_one_event!==dut.hold_before_one)
+        $fatal(1,"Predicted P-1 pulse diverged");
+      if(dut.read_remaining_after_tick!==dut.read_remaining_raw)
+        $fatal(1,"Predicted read-tail state diverged");
+      if(dut.period_event && dut.addr_count_equal_cached!==dut.addr_count_equal)
+        $fatal(1,"Cached terminal address was not ready at the period edge");
+      if(dut.random_read_restart!==((dut.TMODE==4'd2) && dut.rd_en && !dut.rd_en_d))
+        $fatal(1,"Predicted read-replay pulse diverged");
       if(dut.hold_before_two && !dut.count_restart &&
          (dut.count_wrap_cached!==dut.count_wrap_raw || dut.count_less_cached!==dut.addr_count_less))
         $fatal(1,"Cached count boundary was not ready at P-2");
@@ -206,6 +214,14 @@ module tb_mram_pins;
     // Same-mode restart after a completed multi-loop test, with no board reset.
     mode_cfg=2;write_cfg=0;read_cfg=1;period_cfg=10;length_cfg=4;base_cfg=0;
     run_case(0);run_case(0);
+    // Mode changes use synchronous configuration cancellation, with no board
+    // reset and with the same pin/three-loop contract after every command.
+    period_cfg=7;length_cfg=4;base_cfg=22'h12001;
+    for(p=0;p<2;p=p+1) begin
+      mode_cfg=0;write_cfg=p;read_cfg=0;run_case(0);
+      mode_cfg=1;read_cfg=p;run_case(0);
+      mode_cfg=2;write_cfg=2;read_cfg=p;run_case(0);
+    end
     $display("PASS: %0d pin configurations, %0d cycle checks, %0d correctly paired captures; first address, every subsequent address, all loop starts, write/read turnarounds, OE direction and same-mode restart",case_no,pin_checks,capture_total);
     $finish;
   end

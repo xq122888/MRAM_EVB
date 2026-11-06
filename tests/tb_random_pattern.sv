@@ -6,7 +6,7 @@ module tb_random_pattern;
   reg clk=0,rst_n=0,sclk=0,cs_n=1,mosi=0,active=0;
   wire [21:0] address;
   wire [15:0] dq;
-  wire en,wn,ubn,lbn;
+  wire en,wn,gn,ubn,lbn;
   localparam MAX_WORDS=65537, LEGACY_CASES=10, BOUNDARY_CASES=48, PATTERN_CASES=112, ROLLING_CASES=6, REPRO_CASES=6;
   localparam CASES=LEGACY_CASES+BOUNDARY_CASES+PATTERN_CASES+ROLLING_CASES+REPRO_CASES;
   reg [15:0] memory[0:MAX_WORDS-1],read_value=0;
@@ -23,6 +23,9 @@ module tb_random_pattern;
   reg [31:0] granted_seed;
   integer i,j,idx,loop_no,report_loop,report_index,polls,before_ack;
   reg prior_stall=0;
+  integer pin_tick=0,pin_write_cycles,pin_read_period,pin_read_tick;
+  integer pin_offset,pin_slot,pin_tail,pin_total,pin_checks=0;
+  reg prior_pad_active=0,pin_read,expect_en,expect_wn,expect_gn,expect_bn;
   reg [95:0] prior_random;
   reg [15:0] want,comparison_word;
   reg [21:0] comparison_address;
@@ -30,7 +33,7 @@ module tb_random_pattern;
   always #2.5 clk=~clk;
   top dut(.clkp(clk),.clkn(~clk),.rst_n(rst_n),.spi_sclk(sclk),
     .spi_cs_n(cs_n),.spi_mosi(mosi),.spi_miso(miso),.A(address),
-    .DQ(dq),.EN(en),.WN(wn),.UBN(ubn),.LBN(lbn));
+    .DQ(dq),.EN(en),.WN(wn),.GN(gn),.UBN(ubn),.LBN(lbn));
   assign dq=(dut.pad_read && dut.pad_active)?read_value:16'hzzzz;
   function [15:0] golden(input integer round_no,input integer offset);
     reg [31:0] value;
@@ -97,6 +100,44 @@ module tb_random_pattern;
         end else $fatal(1,"Read outside configured range addr=%h",comparison_address);
       end
       #1;
+      // Independent physical-pin contract for EVERY pattern, including all
+      // four alternating types. Do not classify write/read using pad_read:
+      // derive the phase from elapsed clocks and the configured word count.
+      if(dut.pad_active) begin
+        pin_tick=prior_pad_active?pin_tick+1:0;
+        pin_write_cycles=length_cfg*period_cfg;
+        pin_read_period=(read_cfg==1 && period_cfg<8)?8:period_cfg;
+        pin_tail=((read_cfg==1)?9:8)-pin_read_period;
+        if(pin_tail<0)pin_tail=0;
+        pin_total=pin_write_cycles+length_cfg*pin_read_period+pin_tail;
+        pin_read=pin_tick>=pin_write_cycles;
+        if(pin_read) begin
+          pin_read_tick=pin_tick-pin_write_cycles;pin_offset=pin_read_tick/pin_read_period;
+          if(pin_offset>=length_cfg)pin_offset=length_cfg-1;
+          pin_slot=pin_read_tick-pin_offset*pin_read_period;
+          expect_wn=1;expect_en=(read_cfg==0)?0:(pin_slot==0 || pin_slot>=pin_read_period);
+          expect_gn=expect_en;expect_bn=expect_en;
+        end else begin
+          pin_offset=pin_tick/period_cfg;pin_slot=pin_tick%period_cfg;expect_gn=1;
+          case(write_cfg)
+            0:begin expect_en=!(pin_slot>=1 && pin_slot<period_cfg-3);
+                    expect_wn=!(pin_slot<period_cfg-2);expect_bn=expect_wn;end
+            1:begin expect_en=!(pin_slot<period_cfg-2);
+                    expect_wn=!(pin_slot>=1 && pin_slot<period_cfg-3);expect_bn=expect_en;end
+            2:begin expect_en=!(pin_slot<period_cfg-2);
+                    expect_wn=expect_en;expect_bn=!(pin_slot>=1 && pin_slot<period_cfg-3);end
+          endcase
+        end
+        if(chip_cfg==8'h80)expect_bn=0;
+        if(pin_tick>=pin_total || address!==base_addr+pin_offset ||
+           {en,wn,gn,ubn,lbn}!=={expect_en,expect_wn,expect_gn,expect_bn,expect_bn})
+          $fatal(1,"Pin timing pattern=%0d loop=%0d tick=%0d offset=%0d slot=%0d got=%b expected=%b",
+            pattern_cfg,dut.loop_idx,pin_tick,pin_offset,pin_slot,{en,wn,gn,ubn,lbn},
+            {expect_en,expect_wn,expect_gn,expect_bn,expect_bn});
+        pin_checks=pin_checks+1;
+      end else if(prior_pad_active && pin_tick+1!=pin_total)
+        $fatal(1,"Pattern %0d lost/stretched an access cycle",pattern_cfg);
+      prior_pad_active=dut.pad_active;
       if(pattern_cfg==9 && dut.start_d1 && dut.random_test_seed!==granted_seed)
         $fatal(1,"Start seed was not latched atomically");
       if(prior_stall && dut.detail_stall && {dut.random_seed,dut.random_state,dut.dout,16'd0}!==prior_random)
@@ -104,7 +145,7 @@ module tb_random_pattern;
       prior_stall=dut.detail_stall;
       prior_random={dut.random_seed,dut.random_state,dut.dout,16'd0};
       if(dut.detail_stall) pauses=pauses+1;
-    end else prior_stall=0;
+    end else begin prior_stall=0;prior_pad_active=0;end
   end
   task byte_io(input [7:0] value,output [7:0] result);
     integer b;
@@ -133,8 +174,13 @@ module tb_random_pattern;
     if(!$value$plusargs("vectors=%s",vector_path)) $fatal(1,"Missing Python reference vectors");
     $readmemh(vector_path,vectors);
     expected_seeds=LEGACY_CASES+BOUNDARY_CASES+REPRO_CASES+1;
-    if($test$plusargs("repro_only")) begin
+    if($test$plusargs("legacy_only")) begin
+      last_case=LEGACY_CASES;expected_seeds=LEGACY_CASES+1;
+    end else if($test$plusargs("repro_only")) begin
       first_case=CASES-REPRO_CASES;expected_seeds=REPRO_CASES;
+    end else if($test$plusargs("short_patterns_only")) begin
+      first_case=LEGACY_CASES+BOUNDARY_CASES+16;
+      last_case=LEGACY_CASES+BOUNDARY_CASES+PATTERN_CASES;expected_seeds=0;
     end else if($test$plusargs("patterns_only")) begin
       first_case=LEGACY_CASES+BOUNDARY_CASES;
       last_case=CASES-REPRO_CASES;expected_seeds=0;
@@ -249,12 +295,13 @@ module tb_random_pattern;
       active=0;
     end
     if(seeds_taken!=expected_seeds) $fatal(1,"Seed consumed more than once per test");
-    if(first_case==0)
+    if(first_case==0 && last_case==CASES)
       $display("PASS: %0d memory cases, %0d pin-observed writes, reproducible readback, odd/even lengths, x8/x16, all write/read modes, 0x200/0x240/0x400/0x4000 boundaries, all patterns, faults without logging pauses, seed wait and same-mode restart",CASES,total_writes);
     else if($test$plusargs("repro_only"))
       $display("PASS: %0d user-configuration cases, %0d pin-observed writes; base 0, length 592, one round, 50 ns, random x16, details enabled, all write/read modes",REPRO_CASES,total_writes);
     else
-      $display("PASS: %0d selected memory cases, %0d pin-observed writes; per-round rolling start, full 16-bit wrap, three rounds, read replay, same-mode restart",last_case-first_case,total_writes);
+      $display("PASS: %0d selected memory cases, %0d pin-observed writes; configured data sequence, read replay, reports and restarts",last_case-first_case,total_writes);
+    $display("PASS: %0d independent A/CE/WE/OE/UB/LB pin-cycle checks across selected data patterns",pin_checks);
     $finish;
   end
   initial begin #100000000;$fatal(1,"Random pattern watchdog expired");end

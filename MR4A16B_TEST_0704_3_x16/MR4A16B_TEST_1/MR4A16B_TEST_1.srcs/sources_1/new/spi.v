@@ -16,6 +16,7 @@ module spi_protocol #(
     input  wire spi_cs_n,
     input  wire spi_mosi, 
     output wire spi_miso,
+    output wire configuration_commit,
     
     // ≈‰÷√ ‰≥ˆ
     output reg [7:0]  chip_type,
@@ -407,6 +408,7 @@ wire [15:0] commit_x8_offset_r = commit_read_period + 16'd1;
 wire [15:0] commit_bn_w = commit_x8 ? commit_x8_offset : commit_bn_offset_w;
 wire [15:0] commit_bn_r = commit_x8 ? commit_x8_offset_r : commit_en_offset_r;
 reg config_commit;
+assign configuration_commit = config_commit;
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n)
         config_commit <= 1'b0;
@@ -665,6 +667,16 @@ always @(posedge clk or negedge rst_n) begin
         pending_stop <= 1'b0;
 end
 
+// Register completion eligibility before the wide TX-buffer enables.
+// Keep the immediate FIFO/error fence below to reject a concurrent producer.
+(* keep="true",max_fanout=24 *) reg summary_ready;
+always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) summary_ready<=0;
+    else if(config_commit || report_restart || test_frame_acked) summary_ready<=0;
+    else summary_ready<=pending_test_complete && !test_busy &&
+        (!detail_enabled || (!err_flag && !detail_fifo_nonempty));
+end
+
 // ---------- 8.3 ∑¢ÀÕ∆Ù∂Ø¬ﬂº≠£®÷ªÃÓ≥‰ª∫≥Â«¯£¨≤˙…˙∆Ù∂Ø¬ˆ≥Â£© ----------
 reg        frame_sent_this_cs;
 reg [7:0]  tx_buf [0:31];      // ∑¢ÀÕª∫≥Â«¯
@@ -724,7 +736,7 @@ always @(posedge clk or negedge rst_n) begin
                 frame_sent_this_cs <= 1'b1;
             // A loop-finish notification precedes the final compare pipeline
             // draining. Wait for the memory engine to be idle in either mode.
-            end else if (!tx_sending && !frame_sent_this_cs && pending_test_complete && !test_busy &&
+            end else if (!tx_sending && !frame_sent_this_cs && summary_ready &&
                          (!detail_enabled || (!err_flag && !detail_fifo_nonempty))) begin
                 tx_is_detail <= 1'b0;
                 // ÃÓ≥‰ª∫≥Â«¯

@@ -42,6 +42,12 @@ proc mram_collect_spi_timing {repo_root} {
     puts $metadata "MRAM IOB register candidates (expected 75): [llength $mram_io_regs]"
     puts $metadata "Registered output-command FFs (expected 44): [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *pad_cmd*reg*}]]"
     puts $metadata "Registered period-event FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *period_event_reg*}]]"
+    puts $metadata "Predicted P-1 event FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *hold_before_one_event_reg*}]]"
+    puts $metadata "Predicted read-tail FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *read_remaining_after_tick_reg*}]]"
+    puts $metadata "Cached terminal-address FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *addr_count_equal_cached_reg*}]]"
+    puts $metadata "Predicted read-replay FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *random_read_restart_reg*}]]"
+    puts $metadata "Registered SPI summary-ready FFs: [llength [get_cells -quiet -hierarchical -filter {REF_NAME =~ FD* && NAME =~ *summary_ready_reg*}]]"
+    puts $metadata "Obsolete mode-reset FFs (expected 0): [llength [get_cells -quiet -hierarchical -filter {NAME =~ *TMODE_D1_reg* || NAME =~ *TMODE_D2_reg*}]]"
     puts $metadata "ILA/debug-hub cells (expected 0): [llength [get_cells -quiet -hierarchical -filter {NAME =~ u_ila_0 || NAME =~ u_ila_0/* || NAME =~ dbg_hub || NAME =~ dbg_hub/*}]]"
     puts $metadata "Inspect LOC/BEL below; IOB=TRUE alone does not prove packing."
     set placed_in_io 0

@@ -92,6 +92,7 @@ wire [15:0] t_LBL2LBH_r ;
 
 // spi传递数据
 wire        spi_start_test  ;
+wire configuration_commit;
 wire [7:0]  spi_chip_type;
 wire [3:0]  spi_test_mode;
 wire [7:0]  spi_data_pattern;
@@ -132,8 +133,6 @@ wire [15:0] spi_t_lbh2lbl_r;
 wire [15:0] spi_t_lbl2lbh_r;
 
 wire        rstn            ;
-reg [3:0]   TMODE_D1    ;
-reg [3:0]   TMODE_D2    ;
 (* IOB="true", dont_touch="true" *) reg R_EN;
 (* IOB="true", dont_touch="true" *) reg R_WN;
 (* IOB="true", dont_touch="true" *) reg R_GN;
@@ -220,8 +219,9 @@ wire read_due_1 = read_valid[1] && (read_delay_1==4'd1);
 wire read_pending = |read_valid;
 // The pad pipeline releases one edge after flg drops. Issue idle one edge
 // before the final IFF capture; actual pins remain valid THROUGH that capture.
-wire read_remaining_after_tick = (read_valid[0] && read_delay_0>4'd2) ||
-                                 (read_valid[1] && read_delay_1>4'd2);
+wire read_remaining_raw = (read_valid[0] && read_delay_0>4'd2) ||
+                          (read_valid[1] && read_delay_1>4'd2);
+(* keep="true",max_fanout=16 *) reg read_remaining_after_tick;
 
 wire        start           ;// 连接spi_start_test信号，解析成功后开始测试（仅第一个循环出现）
 reg         start_d1        ;
@@ -428,6 +428,7 @@ spi_protocol u_spi_protocol (
     .t_lbh2lbl_r(spi_t_lbh2lbl_r),
     .t_lbl2lbh_r(spi_t_lbl2lbh_r),
     .start_test(spi_start_test),
+    .configuration_commit(configuration_commit),
     .tx_done_pulse(send_frame_ack),
     .detail_stall(spi_detail_stall),
     .detail_overflow(detail_fifo_overflow),
@@ -513,7 +514,18 @@ endfunction
 // The controller emits its loop-start pulse on a restart from a nonzero
 // loop index too. Cover both start edges so this is not a seed advance.
 wire random_new_test = (start_d1 != start_d2);
-wire random_read_restart = (TMODE==4'd2) && rd_en && !rd_en_d;
+// Predict the rd_en rising edge on the same clock that changes rd_en.
+// This keeps the read-replay pulse at its original edge without a late
+// rd_en/rd_en_d decode in every data-register input.
+(* keep="true",max_fanout=24 *) reg random_read_restart;
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) random_read_restart<=0;
+    else if(configuration_commit || spi_start_test || random_seed_wait) random_read_restart<=0;
+    else if(!detail_stall)
+        random_read_restart <= (TMODE==4'd2) && !rd_en &&
+            !((start_d1 && !start_d2) || next_loop_start_d1 || (!flg && !read_pending)) &&
+            addr_is_last && hold_before_two;
+end
 wire [31:0] random_begin_seed = random_new_test ? random_test_seed : random_seed_next;
 wire random_x8 = (chip_type==8'h80) || (chip_type==8'h82);
 wire [15:0] random_begin_word = random_x8 ? {random_begin_seed[7:0],random_begin_seed[7:0]} : random_begin_seed[15:0];
@@ -542,8 +554,6 @@ always @(posedge clk or negedge rst_n) begin
 
 
         
-        TMODE_D1<= 4'd0     ;
-        TMODE_D2<= 4'd0     ;
         
         loop_finish_d1 <= 1'b0  ;
         
@@ -569,8 +579,6 @@ always @(posedge clk or negedge rst_n) begin
         
         end
 
-        TMODE_D1<= TMODE;
-        TMODE_D2<= TMODE_D1;
         
         loop_finish_d1 <= loop_finish;
 
@@ -610,7 +618,7 @@ always @(posedge clk or negedge rstn) begin
 
         // ---------- 2. 检测循环结束条件（与原逻辑完全一致） ----------
         if (!detail_stall && flg && addr_is_last &&
-            (hold_before_one || (addr_num==21'd1 && hold_before_two))) begin
+            (hold_before_one_event || (addr_num==21'd1 && hold_before_two))) begin
             // Length one has no penultimate address to notify completion. Arm
             // the pending read at the write->read phase change, so keep drops
             // before the sole read ends instead of starting an extra write.
@@ -707,12 +715,22 @@ end
 // passes through the load-one expression before clearing every counter bit.
 wire hold_restart_event = (next_loop_start_d2 && !next_loop_start_d3) ||
                           (start_d2 && !start_d3);
+// P-2 already drives the address update. Register it to obtain P-1 at
+// exactly the same clock as the former wide comparator, for periods >=7.
+(* keep="true",max_fanout=24 *) reg hold_before_one_event;
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) hold_before_one_event<=0;
+    else if(configuration_commit || spi_start_test || random_seed_wait ||
+            next_loop_start_d1 || hold_restart_event || period_event)
+        hold_before_one_event<=0;
+    else if(!detail_stall) hold_before_one_event<=hold_before_two;
+end
 (* keep="true",max_fanout=24 *) reg period_event;
 always @(posedge clk or negedge rstn) begin
     if(!rstn) period_event<=0;
     else if(!detail_stall) begin
         if(next_loop_start_d1 || hold_restart_event || period_event) period_event<=0;
-        else period_event<=hold_before_one;
+        else period_event<=hold_before_one_event;
     end
 end
 (* keep="true" *) wire hold_reinitialize = hold_restart_event || period_event;
@@ -721,12 +739,30 @@ end
 wire hold_initial_bit = hold_restart_event || addr_count_less;
 // Do not invent a new cycle at the final period boundary: pending samples
 // drain while the final address and read direction are retained.
+// The count changes at P-2, leaving a full clock before this cached
+// equality is consumed at a period boundary. First-cycle launch bypasses it.
+(* keep="true",max_fanout=16 *) reg addr_count_equal_cached;
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) addr_count_equal_cached<=0;
+    else if(!detail_stall) addr_count_equal_cached<=addr_count_equal;
+end
 (* keep="true" *) wire io_cycle_start = hold_restart_event ||
-    (flg && period_event && !addr_count_equal);
-wire read_pipeline_flush = spi_start_test || random_seed_wait ||
+    (flg && period_event && !addr_count_equal_cached);
+wire read_pipeline_flush = configuration_commit || spi_start_test || random_seed_wait ||
     (start_d1 && !start_d2) || next_loop_start_d1;
 wire read_launch = io_cycle_start && rd_en_d && !read_pipeline_flush;
-wire read_end = flg && addr_count_equal && period_event;
+wire read_end = flg && addr_count_equal_cached && period_event;
+// Predict the next countdown state. This is the SAME remaining-read value,
+// not an added sample cycle; launches load 9/10 clocks, and flush/pause match
+// the metadata counters below. It cuts countdown -> pad-command logic.
+always @(posedge clk or negedge rstn) begin
+    if(!rstn) read_remaining_after_tick<=0;
+    else if(read_pipeline_flush) read_remaining_after_tick<=0;
+    else if(!detail_stall)
+        read_remaining_after_tick <= read_launch ||
+            (read_valid[0] && read_delay_0>4'd3) ||
+            (read_valid[1] && read_delay_1>4'd3);
+end
 always @(posedge clk or negedge rstn) begin
     if(!rstn) begin
         read_valid<=2'b00;read_next_bank<=0;
@@ -820,7 +856,7 @@ end
 //---
 always @* begin
     flg_next=flg;
-    if(random_seed_wait || spi_start_test || (start_d1 && !start_d2) || next_loop_start_d1)
+    if(configuration_commit || random_seed_wait || spi_start_test || (start_d1 && !start_d2) || next_loop_start_d1)
         flg_next=1'b0;
     else if(!detail_stall) begin
         if(hold_restart_event) flg_next=1'b1;
@@ -832,7 +868,7 @@ end
 // before the first new write cycle rather than exposing the old read direction.
 always @(posedge clk or negedge rstn) begin
     if(!rstn) begin rd_en_d<=0;rd_en_d2<=0;end
-    else if(spi_start_test || random_seed_wait) begin
+    else if(configuration_commit || spi_start_test || random_seed_wait) begin
         rd_en_d<=(TMODE==4'd1);rd_en_d2<=(TMODE==4'd1);
     end else if(!detail_stall) begin rd_en_d<=rd_en;rd_en_d2<=rd_en_d;end
 end
@@ -949,7 +985,7 @@ always @(posedge clk or negedge rstn) begin
             random_state <= random_begin_seed;
         end else if (random_read_restart)
             random_state <= random_seed;
-        else if (hold_before_one)
+        else if (hold_before_one_event)
             random_state <= random_state_next;
     end
 end
@@ -977,7 +1013,7 @@ always @(posedge clk or negedge rstn) begin
             8'd9:   dout <= random_read_restart ? random_seed_word : random_begin_word;
             default:dout <= 16'h0;
         endcase 
-    else if(hold_before_one)
+    else if(hold_before_one_event)
         case(din_sel)
             8'd3:   dout <= ~dout;
             8'd4:   dout <= ~dout;
@@ -1129,7 +1165,7 @@ end
 always @(posedge clk or negedge rstn) begin
     if(!rstn)
         rd_en <= 1'b0;
-    else if(spi_start_test || random_seed_wait)
+    else if(configuration_commit || spi_start_test || random_seed_wait)
         rd_en <= (TMODE==4'd1);
     else if(detail_stall)
         rd_en <= rd_en;
@@ -1171,7 +1207,9 @@ end
 
 //----------------------------------------------------------------
 assign start = spi_start_test;// start 信号连接
-assign rstn=rst_n && (!(TMODE_D2!=TMODE_D1));
+// Mode changes cancel the engine synchronously at configuration commit.
+// Only the board reset drives asynchronous reset pins.
+assign rstn=rst_n;
 //assign rstn = rst_n && locked;
 
 // Last-stage registers connect directly to pads: no post-register mode mux.
